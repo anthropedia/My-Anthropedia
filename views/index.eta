@@ -1,0 +1,27 @@
+<% layout("./layout") %>
+
+<h1>Video and Audio Guides</h1>
+
+<% /* <form>
+  <h2>Join Session</h2>
+  <div id="session-code"></div>
+  <sl-button onclick="createSession()">Create Session</sl-button>
+  <input type="text" id="join-code" placeholder="Enter session code" />
+  <button onclick="joinSession()" class="btn btn-primary">Join</button>
+</form> */ %>
+
+<section class="container mt-4">
+  <div class="row gx-3">
+    <% it.medias.forEach(media => { %>
+    <a class="col-md-4 mb-4" href="/media/<%= media.id %>">
+      <div class="card">
+        <img src="https://via.placeholder.com/300" class="card-img-top" alt="Card image cap">
+        <div class="card-body">
+          <h5 class="card-title"><%= media.reference %>: <%= media.title %></h5>
+          <p class="card-text"><%= media.description %></p>
+        </div>
+      </div>
+    </a>
+    <% }) %>
+  </div>
+</section>

@@ -1,0 +1,14 @@
+<% layout("./layout") %>
+
+<% media = it.media %>
+
+<h1><%= media.reference %>: <%= media.title %></h1>
+
+<div class="row"> 
+  <section class="col-md-8">
+    <%~ media.Script_v2 %>
+  </section>
+  <section class="col-md-4">
+    <p><%= media.description %></p>
+  </section>
+</div>
