@@ -29,6 +29,13 @@ async function getData<T>(
   }
 }
 
+async function login(email, password) {
+  return axios.post("http://localhost:3579/token", {email, password })
+}
+
 export default {
-  getData,
-};
+  getData, login
+}
+
+
+
