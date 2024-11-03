@@ -69,9 +69,12 @@ app.post("/login", async (req: Request, res: Response) => {
   const { email, password } = req.body
   try {
     const response = await api.login(email, password)
+    const token = response.data
     // Token format: aaaaa.bbbbb.ccccc
-    if (response.data.split(".").length === 3) {
-      req.session.token = response.data
+    if (token.split(".").length === 3) {
+      req.session.token = token
+      const userResponse = await api.getUser(token)
+      req.session.user = userResponse.data
       return res.redirect("/dashboard")
     }
   } catch (error) {
@@ -92,7 +95,7 @@ app.get("/logout", (req: Request, res: Response) => {
 
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
-  res.render("dashboard")
+  res.render("dashboard", { medias })
 })
 
 app.get("/media/:id", authenticate, (req: Request, res: Response) => {
@@ -101,7 +104,7 @@ app.get("/media/:id", authenticate, (req: Request, res: Response) => {
 
 // Authentication middleware
 function authenticate(req: Request, res: Response, next: () => void) {
-  if (req.session) {
+  if (req.session.token) {
     next()
   } else {
     res.redirect("/login")
