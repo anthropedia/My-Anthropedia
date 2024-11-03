@@ -85,6 +85,14 @@ app.use(
   })
 )
 
+app.get("/", (req: Request, res: Response) => {
+  if (req.session.token) {
+    res.redirect("/dashboard")
+  } else {
+    res.redirect("/login")
+  }
+})
+
 // Auth
 app.get("/login", (req: Request, res: Response) => {
   res.render("login")
