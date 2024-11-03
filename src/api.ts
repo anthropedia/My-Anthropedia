@@ -30,11 +30,11 @@ async function getData<T>(
 }
 
 function login(email, password) {
-  return axios.post("http://localhost:3579/token", {email, password })
+  return axios.post(`${config.TCI_API_URL}/token`, {email, password })
 }
 
 function getUser(token) {
-  return axios.get("http://localhost:3579/user", { headers: { Authorization: token } })
+  return axios.get(`${config.TCI_API_URL}/user`, { headers: { Authorization: token } })
 }
 
 export default {

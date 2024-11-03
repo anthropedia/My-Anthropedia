@@ -4,6 +4,7 @@ import path from "path"
 import { Eta } from "eta"
 import api from "./src/api.ts"
 import session from "express-session"
+import { all } from "axios"
 
 const PORT = process.env.PORT || 3000
 const app = express()
@@ -13,7 +14,7 @@ app.use(express.urlencoded({ extended: true }))
 app.engine("eta", buildEtaEngine())
 app.set("view engine", "eta")
 
-type Media = {
+type MediaType = {
   id: number
   reference: string
   General_Description_of_KY: string
@@ -24,7 +25,31 @@ type Media = {
   Script_v2: string
 }
 
-const medias = await api.getData<Media>("Videos")
+type UserType = {
+  id: null
+  email: string
+  name: string
+  role: string
+  permissions: [string]
+  credit: number
+  clients: [object]
+  is_admin: boolean
+  language: string
+  subscription_expiration_date: Date
+}
+
+class User {
+  constructor(data: UserType) {
+    Object.assign(this, data)
+    this.subscription_expiration_date = new Date(this.subscription_expiration_date)
+  }
+
+  canAccess(ressource: string): boolean {
+    if(this.role === "coach" && this.subscription_expiration_date > Date.now()) return true
+  }
+}
+
+const medias = await api.getData<MediaType>("Videos")
 
 function buildEtaEngine() {
   return (path, opts, callback) => {
@@ -95,16 +120,20 @@ app.get("/logout", (req: Request, res: Response) => {
 
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
-  res.render("dashboard", { medias })
+  const user = req.session.user
+  res.render("dashboard", { allowedMedias: medias?.filter((m) => user?.canAccess(m.reference)) })
 })
 
 app.get("/media/:id", authenticate, (req: Request, res: Response) => {
-  res.render("media", { media: medias?.find((m) => m.id == req.params.id) })
+  const media: MediaType = medias?.find((m) => m.id == req.params.id)
+  if(!req.session.user?.canAccess(media.reference)) return res.status(403).render()
+  res.render("media", { media })
 })
 
 // Authentication middleware
 function authenticate(req: Request, res: Response, next: () => void) {
   if (req.session.token) {
+    req.session.user = new User(req.session.user)
     next()
   } else {
     res.redirect("/login")

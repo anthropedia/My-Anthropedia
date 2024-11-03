@@ -25,7 +25,7 @@
                   <% } %>
 
                   <div data-mdb-input-init class="form-outline mb-4">
-                    <input type="email" name="email" id="form2Example17" class="form-control form-control-lg" />
+                    <input type="email" autofocus name="email" id="form2Example17" class="form-control form-control-lg" />
                     <label class="form-label" for="form2Example17">Email address</label>
                   </div>
 
