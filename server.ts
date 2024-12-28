@@ -164,7 +164,7 @@ app.get("/dashboard", authenticate, (req: Request, res: Response) => {
 
 app.get("/media/:id", authenticate, (req: Request, res: Response) => {
   const media: MediaType = medias?.find((m) => m.id == req.params.id)
-  if(!req.session.user.canAccess(media.reference)) return res.status(403).render()
+  if(!req.session.user.canAccess(media.permission)) return res.status(403).render()
   res.render("media", { media })
 })
 
