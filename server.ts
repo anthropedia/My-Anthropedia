@@ -14,9 +14,14 @@ app.use(express.urlencoded({ extended: true }))
 app.engine("eta", buildEtaEngine())
 app.set("view engine", "eta")
 
+function getMediaId(s: string): string {
+  return s[0].toLowerCase() + s.match(/\d+/)[0]
+}
+
 type MediaType = {
   id: number
   reference: string
+  permission: string
   General_Description_of_KY: string
   title: string
   description: string
@@ -26,11 +31,14 @@ type MediaType = {
 }
 
 type UserType = {
-  id: null
-  email: string
+  id: number
   name: string
+  email: string
   role: string
   permissions: [string]
+}
+
+type CoachUserType = UserType & {
   credit: number
   clients: [object]
   is_admin: boolean
@@ -38,14 +46,36 @@ type UserType = {
   subscription_expiration_date: Date
 }
 
-class User {
-  constructor(data: UserType) {
+type ClientUserType = UserType & {
+  language: string
+  provider: string
+  vod_access_code: string
+  knowyourself_series: string
+}
+
+class User implements CoachUserType | ClientUserType {
+  role: string
+
+  get isCoach(): boolean {
+    return this.role === "coach"
+  }
+  
+  get isClient(): boolean {
+    return this.role === "client"
+  }
+
+  constructor(data: CoachUserType | ClientUserType) {
     Object.assign(this, data)
-    this.subscription_expiration_date = new Date(this.subscription_expiration_date)
+    if(this.isCoach) this.subscription_expiration_date = new Date(this.subscription_expiration_date)
+    if(this.isClient) console.debug(this)
   }
 
   canAccess(ressource: string): boolean {
-    if(this.role === "coach" && this.subscription_expiration_date > Date.now()) return true
+    if(this.subscription_expiration_date > Date.now()) return true
+    if(this.knowyourself_series) {
+      if(this.knowyourself_series.includes(getMediaId(ressource))) return true
+    }
+    return false
   }
 }
 
@@ -107,7 +137,7 @@ app.post("/login", async (req: Request, res: Response) => {
     if (token.split(".").length === 3) {
       req.session.token = token
       const userResponse = await api.getUser(token)
-      req.session.user = userResponse.data
+      req.session.rawUser = userResponse.data
       return res.redirect("/dashboard")
     }
   } catch (error) {
@@ -129,19 +159,20 @@ app.get("/logout", (req: Request, res: Response) => {
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
   const user = req.session.user
-  res.render("dashboard", { allowedMedias: medias?.filter((m) => user?.canAccess(m.reference)) })
+  res.render("dashboard", { allowedMedias: medias?.filter((m) => user.canAccess(m.permission)) })
 })
 
 app.get("/media/:id", authenticate, (req: Request, res: Response) => {
   const media: MediaType = medias?.find((m) => m.id == req.params.id)
-  if(!req.session.user?.canAccess(media.reference)) return res.status(403).render()
+  if(!req.session.user.canAccess(media.reference)) return res.status(403).render()
   res.render("media", { media })
 })
 
 // Authentication middleware
 function authenticate(req: Request, res: Response, next: () => void) {
   if (req.session.token) {
-    req.session.user = new User(req.session.user)
+    req.session.user = new User(req.session.rawUser)
+    console.info("User", req.session.user)
     next()
   } else {
     res.redirect("/login")
