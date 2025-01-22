@@ -10,9 +10,23 @@ const PORT = process.env.PORT || 3000
 const app = express()
 const eta = new Eta({ views: path.join(__dirname, "views") })
 
+// Session setup
+const sessionMiddleware = session({
+  secret: "s3Ssi0nS3kre7",
+  resave: true,
+  saveUninitialized: true,
+  cookie: { 
+    secure: process.env.NODE_ENV === "production",
+    sameSite: 'lax'
+  }
+})
+
+app.use(sessionMiddleware)
 app.use(express.urlencoded({ extended: true }))
 app.engine("eta", buildEtaEngine())
 app.set("view engine", "eta")
+
+const medias = await api.getData<MediaType>("Videos")
 
 function getMediaId(s: string): string {
   return s[0].toLowerCase() + s.match(/\d+/)[0]
@@ -49,7 +63,7 @@ type CoachUserType = UserType & {
 type ClientUserType = UserType & {
   language: string
   provider: string
-  vod_access_code: string
+  temporary_password: string
   knowyourself_series: string
 }
 
@@ -66,20 +80,31 @@ class User implements CoachUserType | ClientUserType {
 
   constructor(data: CoachUserType | ClientUserType) {
     Object.assign(this, data)
-    if(this.isCoach) this.subscription_expiration_date = new Date(this.subscription_expiration_date)
-    if(this.isClient) console.debug(this)
+    
+    // Explicitly set role
+    this.role = data.role || (data as any).permissions?.includes('coach') ? 'coach' : 'client'
+    
+    // Convert subscription date for coaches
+    if (this.isCoach && this.subscription_expiration_date) {
+      this.subscription_expiration_date = new Date(this.subscription_expiration_date)
+    }
   }
 
-  canAccess(ressource: string): boolean {
-    if(this.subscription_expiration_date > Date.now()) return true
-    if(this.knowyourself_series) {
-      if(this.knowyourself_series.includes(getMediaId(ressource))) return true
+  canAccess(resource: string): boolean {
+    // Coach access logic
+    if (this.isCoach) {
+      return this.subscription_expiration_date && 
+             this.subscription_expiration_date > new Date()
     }
+    
+    // Client access logic
+    if (this.isClient && this.knowyourself_series) {
+      return this.knowyourself_series.includes(getMediaId(resource))
+    }
+    
     return false
   }
 }
-
-const medias = await api.getData<MediaType>("Videos")
 
 function buildEtaEngine() {
   return (path, opts, callback) => {
@@ -105,22 +130,9 @@ const generateCode = () => {
   return Math.random().toString(36).substring(2, 6).toUpperCase()
 }
 
-// Session setup
-app.use(
-  session({
-    secret: "your-secret-key",
-    resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false },
-  })
-)
-
 app.get("/", (req: Request, res: Response) => {
-  if (req.session.token) {
-    res.redirect("/dashboard")
-  } else {
-    res.redirect("/login")
-  }
+  if (req.session?.token) res.redirect("/dashboard")
+  else res.redirect("/login")
 })
 
 // Auth
@@ -128,7 +140,45 @@ app.get("/login", (req: Request, res: Response) => {
   res.render("login")
 })
 
-app.post("/login", async (req: Request, res: Response) => {
+app.post("/login/client", async (req: Request, res: Response) => {
+  const { email, password, generate_password } = req.body
+  let data = { client_email: email }
+
+  // Generate password
+  if(generate_password) {
+    try {
+      const response = await api.sendClientPassword(email)
+      data.message = "A temporary password was sent to you by email."
+    }
+    catch(request) {
+      data.error = request.response.data
+    }
+    return res.render("login", data)
+  }
+  // Regular login with email+password
+  try {
+    const response = await api.login(email, password)
+    const token = response.data
+    // Token format: aaaaa.bbbbb.ccccc
+    if (token.split(".").length === 3) {
+      req.session.token = token
+      try {
+        const userResponse = await api.getUser(token)
+        console.debug(userResponse)
+        req.session.rawUser = userResponse.data
+        return res.redirect("/dashboard")
+      } catch(request) {
+        console.debug(request)
+      }
+    }
+  } catch(request) {
+    console.error("Login error:", request)
+    data.error = "Please check your email and password"
+  }
+  return res.render("login", data)
+})
+
+app.post("/login/coach", async (req: Request, res: Response) => {
   const { email, password } = req.body
   try {
     const response = await api.login(email, password)
@@ -148,35 +198,43 @@ app.post("/login", async (req: Request, res: Response) => {
 
 app.get("/logout", (req: Request, res: Response) => {
   req.session.destroy((err) => {
-    if (err) {
-      console.error(err)
-    } else {
-      res.redirect("/login")
-    }
+    if (err) console.error(err)
+    else res.redirect("/login")
   })
 })
 
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
-  const user = req.session.user
+  const user = (req as any).user
+  console.debug({user})
   res.render("dashboard", { allowedMedias: medias?.filter((m) => user.canAccess(m.permission)) })
 })
 
 app.get("/media/:id", authenticate, (req: Request, res: Response) => {
   const media: MediaType = medias?.find((m) => m.id == req.params.id)
-  if(!req.session.user.canAccess(media.permission)) return res.status(403).render()
-  res.render("media", { media })
+  if(!media) return res.status(404).redirect("/")
+  if(!(req as any).user.canAccess(media.permission)) return res.status(403).redirect("/")
+  res.render("media", { media, user: (req as any).user })
 })
 
 // Authentication middleware
-function authenticate(req: Request, res: Response, next: () => void) {
-  if (req.session.token) {
-    req.session.user = new User(req.session.rawUser)
-    console.info("User", req.session.user)
-    next()
-  } else {
-    res.redirect("/login")
+async function authenticate(req: Request, res: Response, next: () => void) {
+  if (!req.session.token) {
+    res.redirect("/")
+    return
   }
+
+  let user
+  if (!req.session.rawUser) {
+    const userData = await api.getUser(req.session.token)
+    if (!userData) return res.redirect("/")
+    req.session.rawUser = userData
+    user = new User(userData)
+  } else {
+    user = new User(req.session.rawUser)
+  }
+  (req as any).user = user
+  next()
 }
 
 app.listen(PORT, () => {

@@ -1,14 +1,335 @@
 <% layout("./layout") %>
 
 <% media = it.media %>
+<% user = it.user %>
 
-<h1><%= media.reference %>: <%= media.title %></h1>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-8">
+      <h1><%= media.reference %>: <%= media.title %></h1>
+      
+      <div id="mediaPlayer" class="position-relative mb-3">
+        <%~ media.Script_v2 %>
+      </div>
 
-<div class="row"> 
-  <section class="col-md-8">
-    <%~ media.Script_v2 %>
-  </section>
-  <section class="col-md-4">
-    <p><%= media.description %></p>
-  </section>
+      <div class="session-controls mb-3">
+        <% if (user.isCoach) { %>
+          <div id="coachControls">
+            <button id="startSession" class="btn btn-primary">Share this page</button>
+            <div id="sessionInfo" class="d-none">
+              <div class="alert alert-info">
+                Session Code: <strong><span id="sessionCode"></span></strong>
+                <button id="endSession" class="btn btn-danger btn-sm float-end">End Session</button>
+              </div>
+            </div>
+          </div>
+        <% } %>
+        
+        <% if (user.isClient) { %>
+          <div id="clientControls">
+            <div class="input-group">
+              <input type="text" id="sessionCodeInput" class="form-control" placeholder="Enter session code">
+              <button id="joinSessionBtn" class="btn btn-primary">Join Session</button>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div id="videoStreams" class="mb-3 d-none">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title mb-3">Video Call</h5>
+            <div class="video-container mb-2">
+              <video id="localVideo" autoplay playsinline muted class="w-100 rounded"></video>
+              <div class="video-label">You</div>
+            </div>
+            <div class="video-container">
+              <video id="remoteVideo" autoplay playsinline class="w-100 rounded"></video>
+              <div class="video-label"><%= user.isCoach ? 'Client' : 'Coach' %></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Description</h5>
+          <p class="card-text"><%= media.description %></p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io({
+    withCredentials: true,
+    autoConnect: false,
+    transports: ['websocket', 'polling']
+  });
+
+  const mediaId = "<%= media.id %>";
+  const isCoach = <%= user.isCoach %>;
+  let currentSessionId = null;
+  
+  // Debug logs for Socket.IO connection
+  socket.on('connect', () => {
+    console.log('Socket.IO connected', socket.id);
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('Socket.IO connection error:', error);
+    if (error.message.includes('Authentication')) {
+      window.location.href = '/';
+    }
+  });
+
+  socket.on('error', (error) => {
+    console.error('Socket.IO error:', error);
+    if (typeof error === 'string' && error.includes('Authentication')) {
+      window.location.href = '/';
+    }
+  });
+
+  // Connect after setting up error handlers
+  socket.connect();
+
+  // WebRTC configuration
+  const configuration = { 
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] 
+  };
+  let peerConnection;
+  let localStream;
+  
+  // Get user media stream
+  async function setupMediaStream() {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      document.getElementById('localVideo').srcObject = localStream;
+      document.getElementById('videoStreams').classList.remove('d-none');
+      
+      if (peerConnection) {
+        localStream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, localStream);
+        });
+      }
+    } catch (err) {
+      console.error('Error accessing media devices:', err);
+      alert('Could not access camera or microphone. Please check your permissions.');
+    }
+  }
+  
+  // Create and handle WebRTC peer connection
+  async function setupPeerConnection() {
+    peerConnection = new RTCPeerConnection(configuration);
+    
+    peerConnection.onicecandidate = event => {
+      if (event.candidate) {
+        socket.emit('webrtc-signal', {
+          sessionId: currentSessionId,
+          signal: {
+            type: 'candidate',
+            candidate: event.candidate
+          }
+        });
+      }
+    };
+    
+    peerConnection.ontrack = event => {
+      const remoteVideo = document.getElementById('remoteVideo');
+      if (remoteVideo.srcObject !== event.streams[0]) {
+        remoteVideo.srcObject = event.streams[0];
+      }
+    };
+    
+    if (localStream) {
+      localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+      });
+    }
+    
+    return peerConnection;
+  }
+  
+  // Coach controls
+  if (isCoach) {
+    const startSessionBtn = document.getElementById('startSession');
+    const sessionInfo = document.getElementById('sessionInfo');
+    const sessionCodeSpan = document.getElementById('sessionCode');
+    const endSessionBtn = document.getElementById('endSession');
+    
+    startSessionBtn.addEventListener('click', async () => {
+      console.log('Starting session...');
+      await setupMediaStream();
+      socket.emit('start-session', { mediaId });
+      console.log('Emitted start-session event');
+    });
+    
+    socket.on('session-started', ({ sessionId }) => {
+      console.log('Session started event received', sessionId);
+      currentSessionId = sessionId;
+      sessionCodeSpan.textContent = sessionId;
+      startSessionBtn.classList.add('d-none');
+      sessionInfo.classList.remove('d-none');
+    });
+    
+    endSessionBtn.addEventListener('click', () => {
+      socket.emit('end-session', { sessionId: currentSessionId });
+      sessionInfo.classList.add('d-none');
+      startSessionBtn.classList.remove('d-none');
+      cleanupSession();
+    });
+  }
+  
+  // Client controls
+  if (!isCoach) {
+    const joinSessionBtn = document.getElementById('joinSessionBtn');
+    const sessionCodeInput = document.getElementById('sessionCodeInput');
+    
+    joinSessionBtn.addEventListener('click', async () => {
+      const sessionId = sessionCodeInput.value.trim();
+      if (sessionId) {
+        currentSessionId = sessionId;
+        await setupMediaStream();
+        socket.emit('join-session', { sessionId });
+      }
+    });
+  }
+  
+  // Media synchronization
+  const videoElement = document.querySelector('video');
+  if (videoElement) {
+    if (isCoach) {
+      videoElement.addEventListener('play', () => {
+        socket.emit('media-control', { 
+          sessionId: currentSessionId,
+          action: 'play',
+          timestamp: videoElement.currentTime
+        });
+      });
+      
+      videoElement.addEventListener('pause', () => {
+        socket.emit('media-control', { 
+          sessionId: currentSessionId,
+          action: 'pause',
+          timestamp: videoElement.currentTime
+        });
+      });
+      
+      videoElement.addEventListener('seeked', () => {
+        socket.emit('media-control', { 
+          sessionId: currentSessionId,
+          action: 'seek',
+          timestamp: videoElement.currentTime
+        });
+      });
+    }
+    
+    socket.on('media-control', ({ action, timestamp }) => {
+      if (action === 'play') {
+        videoElement.currentTime = timestamp;
+        videoElement.play();
+      } else if (action === 'pause') {
+        videoElement.pause();
+        videoElement.currentTime = timestamp;
+      } else if (action === 'seek') {
+        videoElement.currentTime = timestamp;
+      }
+    });
+  }
+  
+  // WebRTC signaling
+  socket.on('webrtc-signal', async ({ signal, senderId }) => {
+    if (!peerConnection) {
+      await setupPeerConnection();
+    }
+    
+    try {
+      if (signal.type === 'offer') {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(signal));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        socket.emit('webrtc-signal', {
+          sessionId: currentSessionId,
+          signal: answer,
+          targetId: senderId
+        });
+      } else if (signal.type === 'answer') {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(signal));
+      } else if (signal.type === 'candidate') {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+      }
+    } catch (err) {
+      console.error('Error handling WebRTC signal:', err);
+    }
+  });
+  
+  socket.on('session-ended', cleanupSession);
+  
+  function cleanupSession() {
+    if (peerConnection) {
+      peerConnection.close();
+      peerConnection = null;
+    }
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+      localStream = null;
+    }
+    document.getElementById('remoteVideo').srcObject = null;
+    document.getElementById('localVideo').srcObject = null;
+    document.getElementById('videoStreams').classList.add('d-none');
+    currentSessionId = null;
+  }
+</script>
+
+<style>
+.video-container {
+  position: relative;
+  background: #f8f9fa;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.video-container video {
+  max-height: 200px;
+  object-fit: cover;
+}
+
+.video-label {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+#mediaPlayer {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.session-controls {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+#sessionInfo .alert {
+  margin-bottom: 0;
+}
+
+.input-group {
+  max-width: 400px;
+}
+</style>

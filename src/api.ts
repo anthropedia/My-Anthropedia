@@ -24,21 +24,25 @@ async function getData<T>(
 
     return body.records.map((r) => ({ id: r.id, ...r.fields }))
   } catch (error) {
-    console.error(error)
+    console.error(error.message)
     return null
   }
 }
 
-function login(email, password) {
+function login(email: string, password: string): Promise<any> {
   return axios.post(`${config.TCI_API_URL}/token`, {email, password })
 }
 
-function getUser(token) {
+function getUser(token: string): Promise<any> {
   return axios.get(`${config.TCI_API_URL}/user`, { headers: { Authorization: token } })
 }
 
+function sendClientPassword(email: string): Promise<any> {
+  return axios.post(`${config.TCI_API_URL}/auth/generate-code`, { email })
+}
+
 export default {
-  getData, login, getUser
+  getData, login, getUser, sendClientPassword
 }
 
 
