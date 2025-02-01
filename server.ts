@@ -13,8 +13,8 @@ const eta = new Eta({ views: path.join(__dirname, "views") })
 // Session setup
 const sessionMiddleware = session({
   secret: "s3Ssi0nS3kre7",
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
   cookie: { 
     secure: process.env.NODE_ENV === "production",
     sameSite: 'lax'
@@ -164,15 +164,15 @@ app.post("/login/client", async (req: Request, res: Response) => {
       req.session.token = token
       try {
         const userResponse = await api.getUser(token)
-        console.debug(userResponse)
         req.session.rawUser = userResponse.data
         return res.redirect("/dashboard")
       } catch(request) {
-        console.debug(request)
+        console.error("Login error:", request.response.data)
+        data.error = "Some error occured: " + request.response.data
       }
     }
   } catch(request) {
-    console.error("Login error:", request)
+    console.error("Login error:", request.response.data)
     data.error = "Please check your email and password"
   }
   return res.render("login", data)
@@ -206,7 +206,6 @@ app.get("/logout", (req: Request, res: Response) => {
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
   const user = (req as any).user
-  console.debug({user})
   res.render("dashboard", { allowedMedias: medias?.filter((m) => user.canAccess(m.permission)) })
 })
 
@@ -219,10 +218,10 @@ app.get("/media/:id", authenticate, (req: Request, res: Response) => {
 
 // Authentication middleware
 async function authenticate(req: Request, res: Response, next: () => void) {
-  if (!req.session.token) {
-    res.redirect("/")
-    return
-  }
+  // if (!req.session.token) {
+  //   res.redirect("/")
+  //   return
+  // }
 
   let user
   if (!req.session.rawUser) {
