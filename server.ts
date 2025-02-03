@@ -4,7 +4,6 @@ import path from "path"
 import { Eta } from "eta"
 import api from "./src/api.ts"
 import session from "express-session"
-import { all } from "axios"
 
 const PORT = process.env.PORT || 3000
 const app = express()
