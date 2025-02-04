@@ -4,7 +4,6 @@ import path from "path"
 import { Eta } from "eta"
 import api from "./src/api.ts"
 import session from "express-session"
-import { all } from "axios"
 
 const PORT = process.env.PORT || 3000
 const app = express()
@@ -135,9 +134,13 @@ app.get("/", (req: Request, res: Response) => {
   else res.redirect("/login")
 })
 
-// Auth
 app.get("/login", (req: Request, res: Response) => {
-  res.render("login")
+  res.redirect("/login/coach")
+})
+
+// Auth
+app.get("/login/client", (req: Request, res: Response) => {
+  res.render("login_client")
 })
 
 app.post("/login/client", async (req: Request, res: Response) => {
@@ -175,7 +178,11 @@ app.post("/login/client", async (req: Request, res: Response) => {
     console.error("Login error:", request.response.data)
     data.error = "Please check your email and password"
   }
-  return res.render("login", data)
+  return res.render("login_client", data)
+})
+
+app.get("/login/coach", (req: Request, res: Response) => {
+  res.render("login_coach")
 })
 
 app.post("/login/coach", async (req: Request, res: Response) => {
@@ -192,7 +199,7 @@ app.post("/login/coach", async (req: Request, res: Response) => {
     }
   } catch (error) {
     console.error("Login error:", error)
-    res.render("login", { error: "Please check your email and password" })
+    res.render("login_coach", { error: "Please check your email and password" })
   }
 })
 
