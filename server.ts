@@ -213,6 +213,7 @@ app.get("/logout", (req: Request, res: Response) => {
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
   const user = (req as any).user
+  console.log(medias)
   res.render("dashboard", { allowedMedias: medias?.filter((m) => user.canAccess(m.permission)) })
 })
 
@@ -225,10 +226,10 @@ app.get("/media/:id", authenticate, (req: Request, res: Response) => {
 
 // Authentication middleware
 async function authenticate(req: Request, res: Response, next: () => void) {
-  // if (!req.session.token) {
-  //   res.redirect("/")
-  //   return
-  // }
+  if (!req.session.token) {
+    res.redirect("/")
+    return
+  }
 
   let user
   if (!req.session.rawUser) {
