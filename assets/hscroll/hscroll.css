@@ -1,0 +1,66 @@
+/* Ensure the scrollable section doesn't exceed 100% width */
+.scrollable-section {
+  width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+  scroll-behavior: smooth;
+  /* Smooth scrolling */
+}
+
+/* Ensure images fit the card dimensions */
+.card-img-top {
+  width: 100%;
+  height: 300px;
+  /* Adjust height as needed */
+  object-fit: cover;
+  /* Ensures the image covers the area without distortion */
+}
+
+/* Custom scrollbar styling (optional) */
+.scrollable-section::-webkit-scrollbar {
+  height: 8px;
+}
+
+.scrollable-section::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.scrollable-section::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Scroll buttons styling */
+.btn-dark {
+  background-color: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.btn-dark:hover {
+  opacity: 1;
+}
+
+.scrollable-section a {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+.scrollable-section .card-body {
+  max-height: 144px;
+  position: absolute;
+  bottom: 0;
+  background: rgba(88, 88, 88, .55);
+  color: #fff;
+}
+.scrollable-section .card-body h5 {
+  font-weight: lighter;
+}

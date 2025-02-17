@@ -12,16 +12,32 @@
 
 <section class="container mt-4">
   <div class="row gx-3">
-    <% it.allowedMedias.forEach(media => { %>
-    <a class="col-md-4 mb-4" href="/media/<%= media.id %>">
-      <div class="card">
-        <img src="https://via.placeholder.com/300" class="card-img-top" alt="Card image cap">
-        <div class="card-body">
-          <h5 class="card-title"><%= media.reference %>: <%= media.title %></h5>
-          <p class="card-text"><%= media.description %></p>
+  <div class="container-fluid">
+    <div class="position-relative">
+      <!-- Scroll buttons -->
+      <button id="scrollLeft" class="btn btn-dark position-absolute top-50 start-0 translate-middle-y z-1">
+        &lt;
+      </button>
+      <button id="scrollRight" class="btn btn-dark position-absolute top-50 end-0 translate-middle-y z-1">
+        &gt;
+      </button>
+
+      <div class="scrollable-section">
+        <div class="d-flex flex-row flex-nowrap overflow-auto">
+          <!-- Repeat this block 16 times -->
+          <% it.allowedMedias.forEach(media => { %>
+          <a class="card me-3" style="flex: 0 0 auto; width: 200px;" href="/media/<%= media.id %>">
+            <img src="/images/dvd 3.jpg" class="card-img-top" alt="Movie Image">
+            <div class="card-body">
+              <h5 class="card-title"><%= media.reference %>: <%= media.title %></h5>
+              <!-- <p class="card-text"><%= media.description.substring(0, 77) %></p> -->
+            </div>
+          </a>
+          <% }) %>
+          <!-- End of block -->
+          <!-- Repeat the above block 15 more times -->
         </div>
       </div>
-    </a>
-    <% }) %>
+    </div>
   </div>
 </section>
