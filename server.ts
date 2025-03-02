@@ -4,6 +4,7 @@ import path from "path"
 import { Eta } from "eta"
 import api from "./src/api.ts"
 import session from "express-session"
+import shareRoutes from "./src/routes/share"
 
 const PORT = process.env.PORT || 3000
 const app = express()
@@ -129,6 +130,9 @@ const generateCode = () => {
   return Math.random().toString(36).substring(2, 6).toUpperCase()
 }
 
+// Share routes
+shareRoutes(app)
+
 app.get("/", (req: Request, res: Response) => {
   if (req.session?.token) res.redirect("/dashboard")
   else res.redirect("/login")
@@ -156,7 +160,7 @@ app.post("/login/client", async (req: Request, res: Response) => {
     catch(request) {
       data.error = request.response.data
     }
-    return res.render("login", data)
+    return res.render("login_client", data)
   }
   // Regular login with email+password
   try {
@@ -176,7 +180,7 @@ app.post("/login/client", async (req: Request, res: Response) => {
     }
   } catch(request) {
     console.error("Login error:", request.response.data)
-    data.error = "Please check your email and password"
+    data.error = "Please check your email and the code sent to your email"
   }
   return res.render("login_client", data)
 })

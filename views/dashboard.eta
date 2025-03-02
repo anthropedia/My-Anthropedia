@@ -1,6 +1,5 @@
 <% layout("./layout") %>
 
-<h1>Video and Audio Guides</h1>
 
 <% /* <form>
   <h2>Join Session</h2>
@@ -10,7 +9,9 @@
   <button onclick="joinSession()" class="btn btn-primary">Join</button>
 </form> */ %>
 
-<section class="container mt-4">
+<section class="hscroll container mt-4">
+  <h2>Video Guides</h2>
+
   <div class="row gx-3">
   <div class="container-fluid">
     <div class="position-relative">
@@ -40,4 +41,10 @@
       </div>
     </div>
   </div>
+</section>
+
+<section class="hscroll container mt-4">
+  <h2>Audio Guides</h2>
+
+  <p>Coming soon...</p>
 </section>
