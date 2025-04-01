@@ -4,10 +4,14 @@ import path from "path"
 import { Eta } from "eta"
 import api from "./src/api.ts"
 import session from "express-session"
+import { createServer } from "http"
+import { Server } from "socket.io"
 import shareRoutes from "./src/routes/share"
 
 const PORT = process.env.PORT || 3000
 const app = express()
+const server = createServer(app)
+const io = new Server(server)
 const eta = new Eta({ views: path.join(__dirname, "views") })
 
 // Session setup
@@ -15,14 +19,15 @@ const sessionMiddleware = session({
   secret: "s3Ssi0nS3kre7",
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     secure: process.env.NODE_ENV === "production",
     sameSite: 'lax'
   }
 })
 
-app.use(sessionMiddleware)
+app.use(json())
 app.use(express.urlencoded({ extended: true }))
+app.use(sessionMiddleware)
 app.engine("eta", buildEtaEngine())
 app.set("view engine", "eta")
 
@@ -73,17 +78,17 @@ class User implements CoachUserType | ClientUserType {
   get isCoach(): boolean {
     return this.role === "coach"
   }
-  
+
   get isClient(): boolean {
     return this.role === "client"
   }
 
   constructor(data: CoachUserType | ClientUserType) {
     Object.assign(this, data)
-    
+
     // Explicitly set role
     this.role = data.role || (data as any).permissions?.includes('coach') ? 'coach' : 'client'
-    
+
     // Convert subscription date for coaches
     if (this.isCoach && this.subscription_expiration_date) {
       this.subscription_expiration_date = new Date(this.subscription_expiration_date)
@@ -93,15 +98,15 @@ class User implements CoachUserType | ClientUserType {
   canAccess(resource: string): boolean {
     // Coach access logic
     if (this.isCoach) {
-      return this.subscription_expiration_date && 
-             this.subscription_expiration_date > new Date()
+      return this.subscription_expiration_date &&
+        this.subscription_expiration_date > new Date()
     }
-    
+
     // Client access logic
     if (this.isClient && this.knowyourself_series) {
       return this.knowyourself_series.includes(getMediaId(resource))
     }
-    
+
     return false
   }
 }
@@ -118,7 +123,6 @@ function buildEtaEngine() {
   }
 }
 
-app.use(json())
 app.use(express.static(path.join(__dirname, "assets")))
 
 // Store active sessions
@@ -130,8 +134,8 @@ const generateCode = () => {
   return Math.random().toString(36).substring(2, 6).toUpperCase()
 }
 
-// Share routes
-shareRoutes(app)
+// Share routes with Socket.IO server
+shareRoutes(app, io)
 
 app.get("/", (req: Request, res: Response) => {
   if (req.session?.token) res.redirect("/dashboard")
@@ -152,12 +156,11 @@ app.post("/login/client", async (req: Request, res: Response) => {
   let data = { client_email: email }
 
   // Generate password
-  if(generate_password) {
+  if (generate_password) {
     try {
       const response = await api.sendClientPassword(email)
       data.message = "A temporary password was sent to you by email."
-    }
-    catch(request) {
+    } catch (request) {
       data.error = request.response.data
     }
     return res.render("login_client", data)
@@ -173,12 +176,12 @@ app.post("/login/client", async (req: Request, res: Response) => {
         const userResponse = await api.getUser(token)
         req.session.rawUser = userResponse.data
         return res.redirect("/dashboard")
-      } catch(request) {
+      } catch (request) {
         console.error("Login error:", request.response.data)
         data.error = "Some error occured: " + request.response.data
       }
     }
-  } catch(request) {
+  } catch (request) {
     console.error("Login error:", request.response.data)
     data.error = "Please check your email and the code sent to your email"
   }
@@ -217,14 +220,13 @@ app.get("/logout", (req: Request, res: Response) => {
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
   const user = (req as any).user
-  console.log(medias)
   res.render("dashboard", { allowedMedias: medias?.filter((m) => user.canAccess(m.permission)) })
 })
 
 app.get("/media/:id", authenticate, (req: Request, res: Response) => {
   const media: MediaType = medias?.find((m) => m.id == req.params.id)
-  if(!media) return res.status(404).redirect("/")
-  if(!(req as any).user.canAccess(media.permission)) return res.status(403).redirect("/")
+  if (!media) return res.status(404).redirect("/")
+  if (!(req as any).user.canAccess(media.permission)) return res.status(403).redirect("/")
   res.render("media", { media, user: (req as any).user })
 })
 
@@ -248,6 +250,41 @@ async function authenticate(req: Request, res: Response, next: () => void) {
   next()
 }
 
-app.listen(PORT, () => {
+// Socket.IO middleware to share session
+io.use((socket, next) => {
+  sessionMiddleware(socket.request as any, {} as any, next as any)
+})
+
+const rooms = new Map()
+
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id)
+
+  socket.on("join", (room) => {
+    console.log(`Client ${socket.id} attempting to join room: ${room}`)
+    if (!rooms.has(room)) rooms.set(room, new Set())
+    rooms.get(room)?.add(socket.id)
+    socket.join(room)
+    console.log(`Client ${socket.id} joined room: ${room}`)
+  })
+
+  socket.on("message", ({ room, content }) => {
+    console.log(`Message received in room ${room}:`, content)
+    io.to(room).emit("message", content)
+  })
+
+  socket.on("disconnect", () => {
+    console.log(`Client ${socket.id} disconnected`)
+    rooms.forEach((value, key) => {
+      if (value.has(socket.id)) {
+        value.delete(socket.id)
+        if (value.size === 0) rooms.delete(key)
+        console.log(`Client ${socket.id} disconnected from room: ${key}`)
+      }
+    })
+  })
+})
+
+server.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`)
 })
