@@ -260,12 +260,20 @@ const rooms = new Map()
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id)
 
-  socket.on("join", (room) => {
-    console.log(`Client ${socket.id} attempting to join room: ${room}`)
-    if (!rooms.has(room)) rooms.set(room, new Set())
-    rooms.get(room)?.add(socket.id)
+  socket.on("create", ({ room, content }) => {
+    console.log(`Coach ${socket.id} is creating room ${room}`)
+    rooms.set(room, { ids: [socket.id], room, content })
     socket.join(room)
-    console.log(`Client ${socket.id} joined room: ${room}`)
+  })
+
+  socket.on("join", (roomId) => {
+    if (!rooms.has(roomId)) return socket.emit("error", `Room ${roomId} does not exist`)
+    const room = rooms.get(roomId)
+    room.ids.push(socket.id)
+    socket.join(roomId)
+    console.debug(`room ${roomId} has`, room)
+    socket.emit("message", room.content)
+    console.log(`Client ${socket.id} joined room: ${roomId}`)
   })
 
   socket.on("message", ({ room, content }) => {
@@ -275,11 +283,11 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`Client ${socket.id} disconnected`)
-    rooms.forEach((value, key) => {
-      if (value.has(socket.id)) {
-        value.delete(socket.id)
-        if (value.size === 0) rooms.delete(key)
-        console.log(`Client ${socket.id} disconnected from room: ${key}`)
+    rooms.forEach((room, key) => {
+      if (room.ids.find(id => id === socket.id)) {
+        room.ids = room.ids.filter(id => id !== socket.id)
+        if (room.ids.length === 0) rooms.delete(key)
+        console.log(`Client ${socket.id} disconnected from room: ${room}`)
       }
     })
   })

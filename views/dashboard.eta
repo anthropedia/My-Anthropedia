@@ -1,13 +1,11 @@
 <% layout("./layout") %>
 
 
-<% /* <form>
-  <h2>Join Session</h2>
-  <div id="session-code"></div>
-  <sl-button onclick="createSession()">Create Session</sl-button>
-  <input type="text" id="join-code" placeholder="Enter session code" />
-  <button onclick="joinSession()" class="btn btn-primary">Join</button>
-</form> */ %>
+<form onsubmit="joinSession(event)">
+  <h2>Join a Session</h2>
+  <input name="code" type="text" minlength="4" maxlength="4" required inputmode="numeric" placeholder="Enter session code" />
+  <input type="submit" class="btn btn-primary" value="Join">
+</form>
 
 <section class="hscroll container mt-4">
   <h2>Video Guides</h2>
@@ -48,3 +46,12 @@
 
   <p>Coming soon...</p>
 </section>
+
+<script>
+  function joinSession(event) {
+    event.preventDefault()
+    const form = event.currentTarget
+    const code = form.code.value
+    location.href = `/share/${code}`
+  }
+</script>

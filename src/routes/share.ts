@@ -1,41 +1,39 @@
-const sessions = {}
+import { Server } from "socket.io"
 
-function routes(app: express.Express) {
-  app.post("/share", async (req, res) => {
-    const token = Math.floor(1000 + Math.random() * 9000)
-    sessions[token] = { mediaId: req.body.media_id }
-    res.json({ token })
-  })
+const rooms = new Map<string, Set<any>>()
 
+function routes(app, server) {
   app.get("/share/:token", (req, res) => {
     const token = req.params.token
     res.render("share", { token })
   })
-  
-  app.get("/events/:token", (req, res) => {
-    const token = req.params.token
-    res.setHeader("Content-Type", "text/event-stream")
-    res.setHeader("Cache-Control", "no-cache")
-    res.setHeader("Connection", "keep-alive")
 
-    const sendEvent = (data) => {
-      res.write(`data: ${JSON.stringify(data)}\n\n`)
-    }
+  const io = new Server(server)
 
-    // Send an initial event
-    sendEvent({ message: "Hello, SSE!" })
+  io.on('connection', (socket) => {
+    console.log('New client connected:', socket.id);
 
-    // Send events every 5 seconds
-    const intervalId = setInterval(() => {
-      sendEvent({ message: `Current time: ${new Date().toISOString()}` })
-    }, 5000)
+    // Join a room
+    socket.on('joinRoom', (room) => {
+      socket.join(room)
+      console.log(`Socket ${socket.id} joined room ${room}`);
+      io.to(room).emit('roomUsers', Array.from(io.sockets.adapter.rooms.get(room) || []));
+    });
 
-    // Clean up when the client closes the connection
-    req.on("close", () => {
-      clearInterval(intervalId)
-      res.end()
-    })
-  })
+    // Leave a room
+    socket.on('leaveRoom', (room) => {
+      socket.leave(room)
+      console.log(`Socket ${socket.id} left room ${room}`);
+      io.to(room).emit('roomUsers', Array.from(io.sockets.adapter.rooms.get(room) || []));
+    });
+
+    // Disconnect event
+    socket.on('disconnect', () => {
+      console.log('Client disconnected:', socket.id);
+    });
+  });
+
+
 }
 
 export default routes

@@ -34,23 +34,6 @@
   </div>
 </main>
 
-<script>
-  async function createSession() {
-    const response = await fetch("/create-session", {
-      method: "POST"
-    });
-    const data = await response.json();
-    document.getElementById(
-      "session-code"
-    ).innerText = `Session Code: ${data.code}`;
-  }
-
-  function joinSession() {
-    const code = document.getElementById("join-code").value;
-    window.location.href = `media.html?code=${code}`;
-  }
-</script>
-
 <style>
   a,
   a:hover {

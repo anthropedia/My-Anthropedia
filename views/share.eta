@@ -1,0 +1,69 @@
+<% layout("./layout") %>
+
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-8">
+      <h1>Coaching Session</h1>
+      <div id="mediaPlayer" class="position-relative mb-3"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://player.vdocipher.com/v2/api.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io()
+  const room = "<%= it.token %>"
+
+  let video = null
+  
+  socket.emit('join', room)
+
+  socket.on('message', (data) => {
+    console.info('client received', data)
+    if(data.mediaScript) {
+      const mediaPlayer = document.getElementById("mediaPlayer")
+      mediaPlayer.innerHTML = data.mediaScript
+      mediaPlayer.querySelector("iframe").src += "&autoplay=true" 
+      initPlayer(data)
+    }
+    // Video is loaded
+    if(data.event && video) {
+      if(["play", "pause"].includes(data.event)) video[data.event]()
+      if(data.event === "seeked") video.currentTime = data.currentTime || 0
+    }
+  })
+
+  function initPlayer(data) {
+    const player = VdoPlayer.getInstance(document.querySelector("iframe")) 
+    video = player.video
+    setTimeout(() => {
+      video.pause()
+      video.currentTime = data.currentTime
+      video.muted = false
+    }, 1000)
+  }
+
+  // client debugging purpose only
+  window.video = video
+  window.socket = socket
+</script>
+<style>
+  /* Your existing styles remain the same */
+  .session-controls {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  #sessionInfo .alert {
+    margin-bottom: 0;
+  }
+
+  .video-container {
+    position: relative;
+    margin-bottom: 1rem;
+  }
+</style>

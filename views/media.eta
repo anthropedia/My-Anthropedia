@@ -13,33 +13,7 @@
       </div>
 
       <div class="session-controls mb-3">
-        <% if (user.isCoach) { %>
-        <div id="coachControls">
-          <button id="startSession" class="btn btn-primary">Start Sharing Session</button>
-          <div id="sessionInfo" class="d-none mt-2">
-            <div class="alert alert-info">
-              <p>Share this code with your client: <strong><span id="sessionCode"></span></strong></p>
-              <button id="copyCode" class="btn btn-sm btn-outline-secondary me-2">Copy Code</button>
-              <button id="endSession" class="btn btn-sm btn-danger">End Session</button>
-            </div>
-            <div class="alert alert-warning mt-2 d-none" id="participantAlert">
-              <span id="participantCount">0</span> participant(s) connected
-            </div>
-          </div>
-        </div>
-        <% } %>
-
-        <% if (user.isClient) { %>
-        <div id="clientControls" class="mt-3">
-          <div class="input-group mb-3">
-            <input type="text" id="sessionCodeInput" class="form-control" placeholder="Enter session code from your coach">
-            <button id="joinSessionBtn" class="btn btn-primary">Join Session</button>
-          </div>
-          <div class="alert alert-info d-none" id="clientConnectedAlert">
-            Connected to coach's session
-          </div>
-        </div>
-        <% } %>
+        <p>Session code: <code id="session-code"></code></p>
       </div>
     </div>
 
@@ -58,28 +32,32 @@
 
   if (isCoach) {
     const socket = io()
-    const room = "6360"
-    socket.emit('join', room)
-    socket.emit("message", { room, content: { mediaScript } })
+    const room = generateSessionId()
+    document.getElementById("session-code").textContent = room
 
     socket.on('message', (message) => {
         console.log('coach received', message)
     })
 
-
-    function leaveRoom(room) {
-        socket.disconnect()
-    }
-
-    window.socket = socket
-
-
     const player = VdoPlayer.getInstance(document.querySelector("iframe"))
     const video = player.video
+    const state = {
+      room,
+      content: {
+        mediaScript,
+        currentTime: video.currentTime,
+        status: video.paused ? "paused" : "playing"
+      }
+    }
+    console.info(`creating room ${room}`)
+    socket.emit("create", state)
+
+    // Force "seeked" event to trigger pause in order to avoid sound echoing between coach and client.
+    video.addEventListener("seeking", video.pause)
 
     const events = ["play", "pause", "seeked"]
     events.forEach((event) => {
-      video.addEventListener(event, (arg) => {
+      video.addEventListener(event, () => {
         socket.emit("message", { room, content: { event, currentTime: video.currentTime } })
       })
     })
@@ -89,7 +67,7 @@
     return Math.random().toString(10).substring(2, 6)
   }
 </script>
-monitor
+
 <style>
   /* Your existing styles remain the same */
   .session-controls {
