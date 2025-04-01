@@ -220,7 +220,7 @@ app.get("/logout", (req: Request, res: Response) => {
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
   const user = (req as any).user
-  res.render("dashboard", { allowedMedias: medias?.filter((m) => user.canAccess(m.permission)) })
+  res.render("dashboard", { isCoach: user.isCoach, allowedMedias: medias?.filter((m) => user.canAccess(m.permission)) })
 })
 
 app.get("/media/:id", authenticate, (req: Request, res: Response) => {

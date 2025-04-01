@@ -1,11 +1,13 @@
 <% layout("./layout") %>
 
 
+<% if(!it.isCoach) { %>
 <form onsubmit="joinSession(event)">
   <h2>Join a Session</h2>
   <input name="code" type="text" minlength="4" maxlength="4" required inputmode="numeric" placeholder="Enter session code" />
   <input type="submit" class="btn btn-primary" value="Join">
 </form>
+<% } %>
 
 <section class="hscroll container mt-4">
   <h2>Video Guides</h2>
