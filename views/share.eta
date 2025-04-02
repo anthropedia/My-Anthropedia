@@ -3,10 +3,14 @@
 
 <div class="container-fluid">
   <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-12">
       <h1>Coaching Session</h1>
       <div id="mediaPlayer" class="position-relative mb-3"></div>
+      <div class="error" id="error" hidden></div>
     </div>
+    <div>
+      <button class="btn btn-primary" id="pause">Let's Start</button>
+      <button class="btn btn-primary" id="mute" hidden>Mute/Unmute</button>
   </div>
 </div>
 
@@ -15,35 +19,61 @@
 <script>
   const socket = io()
   const room = "<%= it.token %>"
-
+  const pauseButton = document.getElementById("pause")
+  const muteButton = document.getElementById("mute")
+  const errorNode = document.getElementById("error")
   let video = null
+  let vdocipherLocked = true  // vdoCipher locks autoplay on load
   
   socket.emit('join', room)
+
+  socket.on("error", (error) => {
+    console.error(error)
+    errorNode.textContent = error + ". Check with your coach."
+    errorNode.hidden = false
+  })
 
   socket.on('message', (data) => {
     console.info('client received', data)
     if(data.mediaScript) {
       const mediaPlayer = document.getElementById("mediaPlayer")
       mediaPlayer.innerHTML = data.mediaScript
-      mediaPlayer.querySelector("iframe").src += "&autoplay=true" 
+      mediaPlayer.querySelector("iframe").src += "&autoplay=false&controls=off" 
       initPlayer(data)
     }
     // Video is loaded
     if(data.event && video) {
       if(["play", "pause"].includes(data.event)) video[data.event]()
+      if(!video.currentTime > 0) video.currentTime = data.currentTime
       if(data.event === "seeked") video.currentTime = data.currentTime || 0
     }
   })
 
   function initPlayer(data) {
     const player = VdoPlayer.getInstance(document.querySelector("iframe")) 
+    window.player = player
     video = player.video
     setTimeout(() => {
-      video.pause()
       video.currentTime = data.currentTime
-      video.muted = false
+      video.pause()
     }, 1000)
+
   }
+
+  pauseButton.addEventListener("click", () => {
+    socket.emit("message", { room, content: { event: "pause", currentTime: video.currentTime } })
+  })
+  pauseButton.addEventListener("click", () => {
+    muteButton.hidden = false
+    video.muted = !video.muted
+  })
+
+  // force vdoCipher user click to unlock video playing
+  document.addEventListener("click", () => {
+    if(!vdocipherLocked) return
+    vdocipherLocked = false
+    pauseButton.textContent = "Pause"
+  })
 
   // client debugging purpose only
   window.video = video

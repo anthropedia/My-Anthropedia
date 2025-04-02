@@ -35,8 +35,8 @@
     const room = generateSessionId()
     document.getElementById("session-code").textContent = room
 
-    socket.on('message', (message) => {
-        console.log('coach received', message)
+    socket.on('message', (data) => {
+      if(data.event) video[data.event]()
     })
 
     const player = VdoPlayer.getInstance(document.querySelector("iframe"))
