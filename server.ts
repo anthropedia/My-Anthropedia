@@ -31,7 +31,10 @@ app.use(sessionMiddleware)
 app.engine("eta", buildEtaEngine())
 app.set("view engine", "eta")
 
-const medias = await api.getData<MediaType>("Videos")
+const videos = await api.getData<MediaType>("Videos")
+const audios = await api.getData<MediaType>("Audios")
+
+console.debug(videos)
 
 function getMediaId(s: string): string {
   return s[0].toLowerCase() + s.match(/\d+/)[0]
@@ -220,11 +223,14 @@ app.get("/logout", (req: Request, res: Response) => {
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
   const user = (req as any).user
-  res.render("dashboard", { isCoach: user.isCoach, allowedMedias: medias?.filter((m) => user.canAccess(m.permission)) })
+  res.render("dashboard", { isCoach: user.isCoach,
+    allowedVideos: videos?.filter((m) => user.canAccess(m.permission)),
+    allowedAudios: audios,
+  })
 })
 
 app.get("/media/:id", authenticate, (req: Request, res: Response) => {
-  const media: MediaType = medias?.find((m) => m.id == req.params.id)
+  const media: MediaType = videos?.find((m) => m.id == req.params.id)
   if (!media) return res.status(404).redirect("/")
   if (!(req as any).user.canAccess(media.permission)) return res.status(403).redirect("/")
   res.render("media", { media, user: (req as any).user })
