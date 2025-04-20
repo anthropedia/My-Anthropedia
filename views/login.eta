@@ -15,7 +15,7 @@
                 <% } %>
 
                 <% if (it.message) { %>
-                <div class="alert alert-danger" role="alert"><%= it.message %></div>
+                <div class="alert alert-success" role="alert"><%= it.message %></div>
                 <% } %>
                 
                 <%~ it.body %>
