@@ -10,7 +10,7 @@
 <% } %>
 
 <section class="hscroll container mt-4">
-  <h2>Video Guides</h2>
+  <h2>Videos</h2>
 
   <%~ include("./_medias_list.eta", {medias: it.allowedVideos || [], defaultImage: "/images/dvd 3.jpg"}) %>
 </section>

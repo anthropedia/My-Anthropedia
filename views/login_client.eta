@@ -9,7 +9,7 @@
   </div>
 
   <small><a href="/login/coach">Login as Coach</a></small>
-  <h5 class="fw-normal mb-3 pb-3">Access The Platform</h5>
+  <h5 class="fw-normal mb-3 pb-3">Access “My Anthropedia”</h5>
 
 
   <div data-mdb-input-init class="form-outline mb-4 row" style="margin-left:0; margin-right:0;">
@@ -21,7 +21,7 @@
   </div>
 
   <div data-mdb-input-init class="form-outline mb-4">
-    <label class="form-label" for="form2Example27">Code Received</label>
+    <label class="form-label" for="form2Example27">Authentication Code</label>
     <input type="password" name="password" id="form2Example27" class="form-control form-control-lg" />
   </div>
 
@@ -29,6 +29,5 @@
     <button data-mdb-button-init data-mdb-ripple-init class="btn btn-dark btn-lg btn-block" type="submit">Login</button>
   </div>
 
-  <a href="#!" class="small text-muted">Terms of use.</a>
-  <a href="#!" class="small text-muted">Privacy policy</a>
+  <a href="https://anthropedia.org/privacy-policy" class="small text-muted" target="_blank">Privacy policy</a>
 </form>

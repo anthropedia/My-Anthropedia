@@ -25,8 +25,7 @@
     <button data-mdb-button-init data-mdb-ripple-init class="btn btn-dark btn-lg btn-block" type="submit">Login</button>
   </div>
 
-  <a class="small text-muted" href="https://anthropedia.org/contact" target="_blank">Forgot password?</a>
+  <a class="small text-muted" href="https://anthropedia.org/contact" target="_blank">Forgot password? Contact us.</a>
   <p class="mb-5 pb-lg-2" style="color: #393f81;">Don't have an account? <a href="https://anthropedia.org/contact" style="color: #393f81;">Contact Us</a></p>
-  <a href="#!" class="small text-muted">Terms of use.</a>
-  <a href="#!" class="small text-muted">Privacy policy</a>
+  <a href="https://anthropedia.org/privacy-policy" class="small text-muted" target="_blank">Privacy policy</a>
 </form>
