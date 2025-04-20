@@ -26,6 +26,6 @@
   </div>
 
   <a class="small text-muted" href="https://anthropedia.org/contact" target="_blank">Forgot password? Contact us.</a>
-  <p class="mb-5 pb-lg-2" style="color: #393f81;">Don't have an account? <a href="https://anthropedia.org/contact" style="color: #393f81;">Contact Us</a></p>
+  <p class="mb-4 pb-lg-2" style="color: #393f81;">Don't have an account? <a href="https://anthropedia.org/contact" style="color: #393f81;">Contact Us</a></p>
   <a href="https://anthropedia.org/privacy-policy" class="small text-muted" target="_blank">Privacy policy</a>
 </form>
