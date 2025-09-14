@@ -1,15 +1,15 @@
-<div class="row gx-3">
+<div class="row gx-3 scrollable-section">
   <div class="container-fluid">
     <div class="position-relative">
       <!-- Scroll buttons -->
-      <button id="scrollLeft" class="btn btn-dark position-absolute top-50 start-0 translate-middle-y z-1">
+      <button class="scrollLeft btn btn-dark position-absolute top-50 start-0 translate-middle-y z-1">
         &lt;
       </button>
-      <button id="scrollRight" class="btn btn-dark position-absolute top-50 end-0 translate-middle-y z-1">
+      <button class="scrollRight btn btn-dark position-absolute top-50 end-0 translate-middle-y z-1">
         &gt;
       </button>
 
-      <div class="scrollable-section">
+      <div class="content">
         <div class="d-flex flex-row flex-nowrap overflow-auto">
           <!-- Repeat this block 16 times -->
           <% it.medias.forEach(media => { %>

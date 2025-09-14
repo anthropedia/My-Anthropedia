@@ -1,22 +1,18 @@
-function enableScroll() {
-  window.addEventListener("load", function () {
-    // Scroll functionality for buttons
-    const scrollableSection = document.querySelector(
-      ".scrollable-section"
-    ).firstElementChild
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.scrollable-section').forEach(section => {
+    const leftBtn  = section.querySelector('.scrollLeft');
+    const rightBtn = section.querySelector('.scrollRight');
+    // The inner flex row has the overflow; fall back to .content if needed
+    const scroller = section.querySelector('.overflow-auto') || section.querySelector('.content');
+    if (!leftBtn || !rightBtn || !scroller) return;
 
-    document.getElementById("scrollLeft").addEventListener("click", () => {
-      scrollableSection.scrollBy({
-        left: -300,
-        behavior: "smooth",
-      })
-    })
+    const step = () => Math.max(240, Math.round(scroller.clientWidth * 0.9)); // responsive step
 
-    document.getElementById("scrollRight").addEventListener("click", () => {
-      scrollableSection.scrollBy({
-        left: 300,
-        behavior: "smooth",
-      })
-    })
-  })
-}
+    leftBtn.addEventListener('click', () => {
+      scroller.scrollBy({ left: -step(), behavior: 'smooth' });
+    });
+    rightBtn.addEventListener('click', () => {
+      scroller.scrollBy({ left: step(), behavior: 'smooth' });
+    });
+  });
+});

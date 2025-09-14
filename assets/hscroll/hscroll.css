@@ -1,5 +1,5 @@
 /* Ensure the scrollable section doesn't exceed 100% width */
-.hscroll .scrollable-section {
+.hscroll .scrollable-section .content {
   width: 100%;
   overflow-x: auto;
   white-space: nowrap;
@@ -17,16 +17,16 @@
 }
 
 /* Custom scrollbar styling (optional) */
-.hscroll .scrollable-section::-webkit-scrollbar {
+.hscroll .scrollable-section .content::-webkit-scrollbar {
   height: 8px;
 }
 
-.hscroll .scrollable-section::-webkit-scrollbar-thumb {
+.hscroll .scrollable-section .content::-webkit-scrollbar-thumb {
   background: #888;
   border-radius: 4px;
 }
 
-.hscroll .scrollable-section::-webkit-scrollbar-thumb:hover {
+.hscroll .scrollable-section .content::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
 
