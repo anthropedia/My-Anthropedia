@@ -5,7 +5,7 @@
 <section class="container <% if(it.computeRemainingDays(it.user.subscription_expiration_date) < 90) { %>end-subscription<% } %>">
   <p class="text-end">
     <small class="italic fw-lighter">Your subscription is valid through <%= it.formatDate(it.user.subscription_expiration_date) %></small>
-    <a href="https://professionals.anthropedia.org" class="btn btn-outline-primary btn-sm">Renew</a>
+    <a href="https://professionals.anthropedia.org" class="btn btn-outline-primary btn-sm" target="blank">Renew</a>
   </p>
 </section>
 <% } %>
