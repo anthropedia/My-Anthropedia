@@ -7,6 +7,7 @@ import session from "express-session"
 import { createServer } from "http"
 import { Server } from "socket.io"
 import shareRoutes from "./src/routes/share"
+import middlewares from "./src/middlewares"
 
 const PORT = process.env.PORT || 3000
 const app = express()
@@ -28,6 +29,7 @@ const sessionMiddleware = session({
 app.use(json())
 app.use(express.urlencoded({ extended: true }))
 app.use(sessionMiddleware)
+app.use(middlewares)
 app.engine("eta", buildEtaEngine())
 app.set("view engine", "eta")
 
@@ -162,7 +164,7 @@ app.post("/login/client", async (req: Request, res: Response) => {
   if (generate_password) {
     try {
       const response = await api.sendClientPassword(email)
-      data.message = "A temporary password was sent to you by email."
+      data.message = "An authentication code has been sent to you via email."
     } catch (request) {
       data.error = request.response.data
     }
@@ -223,9 +225,12 @@ app.get("/logout", (req: Request, res: Response) => {
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
   const user = (req as any).user
+  console.log('>>>>>>', user)
+
   res.render("dashboard", { isCoach: user.isCoach,
     allowedVideos: videos?.filter((m) => user.canAccess(m.permission)),
     allowedAudios: audios,
+    user
   })
 })
 

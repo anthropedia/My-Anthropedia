@@ -1,6 +1,15 @@
 <% layout("./layout") %>
 
 
+<% if(it.isCoach) { %>
+<section class="container <% if(it.computeRemainingDays(it.user.subscription_expiration_date) < 90) { %>end-subscription<% } %>">
+  <p class="text-end">
+    <small class="italic fw-lighter">Your subscription is valid through <%= it.formatDate(it.user.subscription_expiration_date) %></small>
+    <a href="https://professionals.anthropedia.org" class="btn btn-outline-primary btn-sm">Renew</a>
+  </p>
+</section>
+<% } %>
+
 <% if(!it.isCoach) { %>
 <form onsubmit="joinSession(event)">
   <h2>Join a Session</h2>
@@ -29,3 +38,10 @@
     location.href = `/share/${code}`
   }
 </script>
+
+<style>
+  .end-subscription {
+    color: red;
+    font-weight: bold;
+  }
+</style>
