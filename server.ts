@@ -100,7 +100,7 @@ class User implements CoachUserType | ClientUserType {
     }
   }
 
-  canAccess(resource: string): boolean {
+  canAccess(resource: string = null): boolean {
     // Coach access logic
     if (this.isCoach) {
       return this.subscription_expiration_date &&
@@ -109,7 +109,8 @@ class User implements CoachUserType | ClientUserType {
 
     // Client access logic
     if (this.isClient && this.knowyourself_series) {
-      return this.knowyourself_series.includes(getMediaId(resource))
+      if(resource) return this.knowyourself_series.includes(getMediaId(resource))
+      else return this.knowyourself_series.length > 0
     }
 
     return false
@@ -222,10 +223,13 @@ app.get("/logout", (req: Request, res: Response) => {
   })
 })
 
+app.get("/restricted", (req: Request, res: Response) => {
+  res.render("restricted")
+})
+
 // Protected routes
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
   const user = (req as any).user
-  console.log('>>>>>>', user)
 
   res.render("dashboard", { isCoach: user.isCoach,
     allowedVideos: videos?.filter((m) => user.canAccess(m.permission)),
@@ -258,6 +262,7 @@ async function authenticate(req: Request, res: Response, next: () => void) {
     user = new User(req.session.rawUser)
   }
   (req as any).user = user
+  if(!user.canAccess()) return res.redirect("/restricted")
   next()
 }
 

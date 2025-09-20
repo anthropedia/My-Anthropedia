@@ -1,0 +1,5 @@
+<% layout("./login") %>
+
+<h1>Access Restricted</h1>
+
+<p>This system is reserved to restricted coaches with a subscription and their clients.</p>
