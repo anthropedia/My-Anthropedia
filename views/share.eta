@@ -30,7 +30,7 @@
   socket.emit('join', room)
 
   socket.on("error", (error) => {
-    console.error(error)
+    // console.error(error)
     errorNode.textContent = error + ". Check with your coach."
     errorNode.hidden = false
   })
