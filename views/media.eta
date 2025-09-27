@@ -34,7 +34,7 @@
 <script>
   const mediaId = `<%= media.id %>`
   const mediaScript = `<%~ media.iframe_v2 %>`
-  const isCoach = <%= user.isCoach ? 'true' : 'false' %>
+  const isCoach = <%= user.isCoach ? 'true' : 'false' %>;
 
   if (isCoach) {
     const socket = io()
@@ -42,7 +42,7 @@
     document.getElementById("session-code").textContent = room
 
     socket.on('message', (data) => {
-      if(data.event) video[data.event]()
+      if(video[data.event]) video[data.event]()
     })
 
     const player = VdoPlayer.getInstance(document.querySelector("iframe"))

@@ -8,8 +8,7 @@
       <div class="error" id="error" hidden></div>
     </div>
     <div>
-      <button class="btn btn-primary" id="pause">I am ready</button>
-      <button class="btn btn-primary" id="mute" hidden>Mute/Unmute</button>
+      <button class="btn btn-primary" id="pause">Pause</button>
     </div>
   </div>
 </div>
@@ -19,18 +18,16 @@
 <script>
   const socket = io()
   const room = "<%= it.token %>"
-  const readyButton = document.getElementById("pause")
+  const pauseButton = document.getElementById("pause")
   const muteButton = document.getElementById("mute")
   const errorNode = document.getElementById("error")
   let video = null
-  let vdocipherLocked = true // vdoCipher locks autoplay on load
   let latestServerEvent = null // Store the latest event from the server
   let serverPlaybackState = { playing: false, currentTime: 0 } // Tracks server state
 
   socket.emit('join', room)
 
   socket.on("error", (error) => {
-    // console.error(error)
     errorNode.textContent = error + ". Check with your coach."
     errorNode.hidden = false
   })
@@ -40,7 +37,7 @@
     if (data.mediaScript) {
       const mediaPlayer = document.getElementById("mediaPlayer")
       mediaPlayer.innerHTML = data.mediaScript
-      mediaPlayer.querySelector("iframe").src += "&autoplay=true&controls=off"
+      mediaPlayer.querySelector("iframe").src += "&autoplay=false&controls=off"
       initPlayer(data)
     }
 
@@ -50,32 +47,22 @@
         playing: data.event === "play",
         currentTime: data.currentTime || serverPlaybackState.currentTime
       }
-      latestServerEvent = data
+      applyServerEvent(data)
     }
 
-    if (!vdocipherLocked) {
-      applyServerEvent(latestServerEvent)
-    }
   })
 
-  readyButton.addEventListener("click", () => {
-    if (vdocipherLocked) {
-      vdocipherLocked = false
-      readyButton.textContent = "Pause" // Change button text after enabling
 
-      // Apply the latest server event when unlocking playback
-      if (latestServerEvent) {
-        applyServerEvent(latestServerEvent)
-      }
-    }
+  pauseButton.addEventListener("click", () => {
     socket.emit("message", {
       room,
       content: {
         event: "pause",
-        currentTime: video.currentTime
+        currentTime: video.currentTime || 0
       }
     })
   })
+
 
   function applyServerEvent(data) {
     if (data && video) {
