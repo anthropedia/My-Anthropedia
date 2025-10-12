@@ -13,11 +13,7 @@
   <div class="row">
     <div class="col-8">
       <div id="mediaPlayer" class="position-relative mb-3">
-        <% if (user.isCoach) { %>
-          <%~ media.iframe_v2 %>
-        <% } else { %>
-          <%~ media.iframe_v2 %>&captions=off&cc=off&captions=false
-        <% } %>
+        <%~ media.iframe_v2 %>
       </div>
     </div>
     <div class="col-4">
