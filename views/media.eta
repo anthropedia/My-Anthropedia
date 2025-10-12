@@ -20,6 +20,7 @@
       <%~ media.description %>
     </div>
   </div>
+  <% if (user.isCoach) { %>
   <div class="row">
     <div class="col-12">
       <div class="session-controls mb-3">
@@ -27,6 +28,7 @@
       </div>
     </div>
   </div>
+  <% } %>
 </div>
 
 <script src="https://player.vdocipher.com/v2/api.js"></script>
@@ -92,3 +94,4 @@
     margin-bottom: 1rem;
   }
 </style>
+

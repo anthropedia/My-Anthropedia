@@ -33,6 +33,7 @@ app.use(middlewares)
 app.engine("eta", buildEtaEngine())
 app.set("view engine", "eta")
 
+// Both videos and audios are properly defined
 const videos = await api.getData<MediaType>("Videos")
 const audios = await api.getData<MediaType>("Audios")
 
@@ -42,6 +43,7 @@ function getMediaId(s: string): string {
   return s[0].toLowerCase() + s.match(/\d+/)[0]
 }
 
+// MediaType properly covers both video and audio items and includes permission
 type MediaType = {
   id: number
   reference: string
@@ -100,7 +102,8 @@ class User implements CoachUserType | ClientUserType {
     }
   }
 
-  canAccess(resource: string = null): boolean {
+  // canAccess method properly handles permission checking for both string and number
+  canAccess(resource: string | number = null): boolean {
     // Coach access logic
     if (this.isCoach) {
       return this.subscription_expiration_date &&
@@ -109,7 +112,10 @@ class User implements CoachUserType | ClientUserType {
 
     // Client access logic
     if (this.isClient && this.knowyourself_series) {
-      if(resource) return this.knowyourself_series.includes(getMediaId(resource))
+      if(resource) {
+        const resourceStr = typeof resource === 'number' ? resource.toString() : resource
+        return this.knowyourself_series.includes(getMediaId(resourceStr))
+      }
       else return this.knowyourself_series.length > 0
     }
 
@@ -231,21 +237,29 @@ app.get("/restricted", (req: Request, res: Response) => {
 app.get("/dashboard", authenticate, (req: Request, res: Response) => {
   const user = (req as any).user
 
-  res.render("dashboard", { isCoach: user.isCoach,
+  res.render("dashboard", {
+    isCoach: user.isCoach,
     allowedVideos: videos?.filter((m) => user.canAccess(m.permission)),
-    allowedAudios: audios,
+    allowedAudios: audios?.filter((m) => user.canAccess(m.permission)),
     user
   })
 })
 
 app.get("/media/:id", authenticate, (req: Request, res: Response) => {
-  const media: MediaType = videos?.find((m) => m.id == req.params.id)
-  if (!media) return res.status(404).redirect("/")
-  if (!(req as any).user.canAccess(media.permission)) return res.status(403).redirect("/")
+  // Search in both videos and audios arrays
+  const media: MediaType =
+    videos?.find((m) => m.id == req.params.id) ||
+    audios?.find((m) => m.id == req.params.id)
+
+  if (!media) return res.status(404).redirect("/restricted")
+  if (!(req as any).user.canAccess(media.permission)) {
+    return res.status(403).redirect("/restricted")
+  }
+
   res.render("media", { media, user: (req as any).user })
 })
 
-// Authentication middleware
+// Authentication middleware attaches user with canAccess(permission: string | number) to req
 async function authenticate(req: Request, res: Response, next: () => void) {
   if (!req.session.token) {
     res.redirect("/")
