@@ -13,11 +13,11 @@
 
   <div class="form-outline mb-4">
     <label class="form-label" for="email">Email address</label>
-    <input 
-      type="email" 
-      autofocus 
-      name="email" 
-      id="email" 
+    <input
+      type="email"
+      autofocus
+      name="email"
+      id="email"
       class="form-control form-control-lg"
       required
     />
@@ -84,6 +84,8 @@
     const reply = await response.text()
     if(reply == "HTTPQuerySet object matching query does not exist") {
       alert("This email does not exist. Try another email.")
+    } else {
+      alert("Password reset email sent. Check your inbox.")
     }
   }
 </script>
