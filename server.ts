@@ -37,7 +37,7 @@ app.set("view engine", "eta")
 const videos = await api.getData<MediaType>("Videos")
 const audios = await api.getData<MediaType>("Audios")
 
-console.debug(videos)
+// console.debug(videos)
 
 function getMediaId(s: string): string {
   return s[0].toLowerCase() + s.match(/\d+/)[0]
@@ -180,7 +180,18 @@ app.post("/login/client", async (req: Request, res: Response) => {
   // Regular login with email+password
   try {
     const response = await api.login(email, password)
-    const token = response.data
+    const responseData = response.data
+    
+    // Handle multiple accounts response
+    if (responseData.multiple_accounts) {
+      return res.render("login_client", { 
+        multiple_accounts: responseData.accounts,
+        email,
+        show_selection: true 
+      })
+    }
+    
+    const token = responseData
     // Token format: aaaaa.bbbbb.ccccc
     if (token.split(".").length === 3) {
       req.session.token = token
@@ -194,10 +205,71 @@ app.post("/login/client", async (req: Request, res: Response) => {
       }
     }
   } catch (request) {
-    console.error("Login error:", request.response.data)
+    console.error("Login error:", request)
+    console.error("Login error response:", request.response)
+    console.error("Login error response data:", request.response?.data)
+    console.error("Login error message:", request.message)
     data.error = "Please check your email and the code sent to your email"
   }
   return res.render("login_client", data)
+})
+
+app.post("/login/account", async (req: Request, res: Response) => {
+  console.log("=== ACCOUNT LOGIN ATTEMPT ===")
+  console.log("Request body:", req.body)
+  
+  if (!req.body) {
+    console.error("No request body found")
+    return res.status(400).send("No request body")
+  }
+  
+  const { email, account_id, password } = req.body
+  console.log("Parsed values:", { email, account_id, password })
+  
+  if (!account_id || !password) {
+    console.error("Missing account_id or password")
+    return res.status(400).send("Missing required fields")
+  }
+  
+  try {
+    console.log("Calling API...")
+    const response = await api.loginWithAccount(account_id, password)
+    console.log("API response received:", response)
+    console.log("API response data:", response.data)
+    
+    const token = response.data
+    console.log("Token extracted:", token)
+    
+    // Token format: aaaaa.bbbbb.ccccc
+    if (token && token.split(".").length === 3) {
+      console.log("Token is valid, setting session and redirecting...")
+      req.session.token = token
+      
+      try {
+        const userResponse = await api.getUser(token)
+        console.log("User response received:", userResponse.data)
+        req.session.rawUser = userResponse.data
+        return res.redirect("/dashboard")
+      } catch (userError) {
+        console.error("Error getting user:", userError)
+        return res.redirect("/dashboard")
+      }
+    } else {
+      console.error("Invalid token format:", token)
+      throw new Error("Invalid token received")
+    }
+  } catch (error) {
+    console.error("Account login error:", error)
+    console.error("Account login response:", error.response)
+    console.error("Account login response data:", error.response?.data)
+    console.error("Account login error message:", error.message)
+    const data = { 
+      error: "Please check your email and  code sent to your email",
+      email,
+      account_id 
+    }
+    return res.render("login_client", data)
+  }
 })
 
 app.get("/login/coach", (req: Request, res: Response) => {
@@ -261,6 +333,7 @@ app.get("/media/:id", authenticate, (req: Request, res: Response) => {
 
 // Authentication middleware attaches user with canAccess(permission: string | number) to req
 async function authenticate(req: Request, res: Response, next: () => void) {
+  console.debug(req.session)
   if (!req.session.token) {
     res.redirect("/")
     return

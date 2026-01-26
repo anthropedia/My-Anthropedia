@@ -1,10 +1,13 @@
 const config = process.env
+import dotenv from "dotenv"
 import axios from "axios"
+
+dotenv.config()
 
 async function getData<T>(
   table: string,
   query: object,
-  options = { sort: "" }
+  options = { sort: "" },
 ): Promise<T[] | null> {
   try {
     const response = await axios.get(
@@ -15,8 +18,8 @@ async function getData<T>(
           Authorization: `Bearer ${config.GRIST_TOKEN}`,
           Accept: "application/json",
         },
-      }
-    );
+      },
+    )
 
     const body = response.data
 
@@ -29,12 +32,20 @@ async function getData<T>(
   }
 }
 
-function login(email: string, password: string): Promise<any> {
-  return axios.post(`${config.TCI_API_URL}/token`, {email, password })
+async function login(email: string, password: string): Promise<any> {
+  const response = await axios.post(`${config.TCI_API_URL}/token`, { email, password })
+  return response
+}
+
+async function loginWithAccount(account_id: string, password: string): Promise<any> {
+  const response = await axios.post(`${config.TCI_API_URL}/login/account`, { account_id, password })
+  return response
 }
 
 function getUser(token: string): Promise<any> {
-  return axios.get(`${config.TCI_API_URL}/user`, { headers: { Authorization: token } })
+  return axios.get(`${config.TCI_API_URL}/user`, {
+    headers: { Authorization: token },
+  })
 }
 
 function sendClientPassword(email: string): Promise<any> {
@@ -42,8 +53,8 @@ function sendClientPassword(email: string): Promise<any> {
 }
 
 export default {
-  getData, login, getUser, sendClientPassword
+  getData,
+  login,
+  getUser,
+  sendClientPassword,
 }
-
-
-
