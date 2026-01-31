@@ -18,17 +18,21 @@
 </form>
 <% } %>
 
+<% if (it.allowedVideos && it.allowedVideos.length > 0) { %>
 <section class="hscroll container mt-4">
   <h2>Videos</h2>
 
   <%~ include("./_medias_list.eta", {medias: it.allowedVideos || [], defaultImage: "/images/dvd 3.jpg"}) %>
 </section>
+<% } %>
 
+<% if (it.allowedAudios && it.allowedAudios.length > 0) { %>
 <section class="hscroll container mt-4">
   <h2>Audio Guides</h2>
 
   <%~ include("./_medias_list.eta", {medias: it.allowedAudios || [], defaultImage: "/images/Audio Guide 1.png"}) %>
 </section>
+<% } %>
 
 <script>
   function joinSession(event) {
