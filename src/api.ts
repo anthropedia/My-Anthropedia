@@ -34,7 +34,7 @@ async function getData<T>(
 
 async function login(email: string, password: string): Promise<any> {
   try {
-    const response = await axios.post(`${config.TCI_API_URL}/token`, { email, password })
+    const response = await axios.post(`${config.TCI_API_URL}/client-login`, { email, password })
     return response
   } catch (error) {
     console.error("API Error in login:", error)
