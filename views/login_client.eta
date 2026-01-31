@@ -9,48 +9,8 @@
   </div>
 
   <small><a href="/login/coach">Login as Coach</a></small>
-  <h5 class="fw-normal mb-3 pb-3">Access “My Anthropedia”</h5>
+  <h5 class="fw-normal mb-3 pb-3">Access "My Anthropedia"</h5>
 
-
-  <% if (it.show_selection) { %>
-  <div class="alert alert-info mb-4">
-    <h6>Select Account</h6>
-    <p class="mb-2">Multiple accounts found for email: <strong><%= it.email %></strong></p>
-    <div class="list-group">
-      <% it.multiple_accounts.forEach(account => { %>
-        <div class="list-group-item list-group-item-action">
-          <div class="d-flex w-100 justify-content-between">
-            <h6 class="mb-1"><%= account.provider %></h6>
-            <small><%= account.created %></small>
-          </div>
-          <small class="text-muted">Account ID: <%= account.id.substring(0, 8) %>...</small>
-        </div>
-      <% }) %>
-    </div>
-    <p class="mt-3 mb-0"><small class="text-muted">Please select an account above and re-enter your authentication code to continue.</small></p>
-  </div>
-
-  <form action="/login/account" method="post" class="login">
-    <input type="hidden" name="email" value="<%= it.email %>" />
-    <div data-mdb-input-init class="form-outline mb-4">
-      <label class="form-label">Select Account</label>
-      <select name="account_id" class="form-control form-control-lg" required>
-        <% it.multiple_accounts.forEach(account => { %>
-          <option value="<%= account.id %>"><%= account.provider %> (<%= account.created %>)</option>
-        <% }) %>
-      </select>
-    </div>
-
-    <div data-mdb-input-init class="form-outline mb-4">
-      <label class="form-label" for="form2Example27">Authentication Code</label>
-      <input type="password" name="password" id="form2Example27" class="form-control form-control-lg" required />
-    </div>
-
-    <div class="pt-1 mb-4">
-      <button data-mdb-button-init data-mdb-ripple-init class="btn btn-dark btn-lg btn-block" type="submit">Login with Selected Account</button>
-    </div>
-  </form>
-<% } else { %>
   <div data-mdb-input-init class="form-outline mb-4 row" style="margin-left:0; margin-right:0;">
     <label class="form-label" for="form2Example17">Email address</label>
     <div class="col-9">
@@ -67,7 +27,6 @@
   <div class="pt-1 mb-4">
     <button data-mdb-button-init data-mdb-ripple-init class="btn btn-dark btn-lg btn-block" type="submit">Login</button>
   </div>
-<% } %>
 
   <a href="https://anthropedia.org/privacy-policy" class="small text-muted" target="_blank">Privacy policy</a>
 </form>

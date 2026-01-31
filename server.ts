@@ -214,64 +214,6 @@ app.post("/login/client", async (req: Request, res: Response) => {
   return res.render("login_client", data)
 })
 
-app.post("/login/account", async (req: Request, res: Response) => {
-  console.log("=== ACCOUNT LOGIN ATTEMPT ===")
-  console.log("Request body:", req.body)
-  
-  if (!req.body) {
-    console.error("No request body found")
-    return res.status(400).send("No request body")
-  }
-  
-  const { email, account_id, password } = req.body
-  console.log("Parsed values:", { email, account_id, password })
-  
-  if (!account_id || !password) {
-    console.error("Missing account_id or password")
-    return res.status(400).send("Missing required fields")
-  }
-  
-  try {
-    console.log("Calling API...")
-    const response = await api.loginWithAccount(account_id, password)
-    console.log("API response received:", response)
-    console.log("API response data:", response.data)
-    
-    const token = response.data
-    console.log("Token extracted:", token)
-    
-    // Token format: aaaaa.bbbbb.ccccc
-    if (token && token.split(".").length === 3) {
-      console.log("Token is valid, setting session and redirecting...")
-      req.session.token = token
-      
-      try {
-        const userResponse = await api.getUser(token)
-        console.log("User response received:", userResponse.data)
-        req.session.rawUser = userResponse.data
-        return res.redirect("/dashboard")
-      } catch (userError) {
-        console.error("Error getting user:", userError)
-        return res.redirect("/dashboard")
-      }
-    } else {
-      console.error("Invalid token format:", token)
-      throw new Error("Invalid token received")
-    }
-  } catch (error) {
-    console.error("Account login error:", error)
-    console.error("Account login response:", error.response)
-    console.error("Account login response data:", error.response?.data)
-    console.error("Account login error message:", error.message)
-    const data = { 
-      error: "Please check your email and  code sent to your email",
-      email,
-      account_id 
-    }
-    return res.render("login_client", data)
-  }
-})
-
 app.get("/login/coach", (req: Request, res: Response) => {
   res.render("login_coach")
 })

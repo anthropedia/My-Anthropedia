@@ -33,13 +33,15 @@ async function getData<T>(
 }
 
 async function login(email: string, password: string): Promise<any> {
-  const response = await axios.post(`${config.TCI_API_URL}/token`, { email, password })
-  return response
-}
-
-async function loginWithAccount(account_id: string, password: string): Promise<any> {
-  const response = await axios.post(`${config.TCI_API_URL}/login/account`, { account_id, password })
-  return response
+  try {
+    const response = await axios.post(`${config.TCI_API_URL}/token`, { email, password })
+    return response
+  } catch (error) {
+    console.error("API Error in login:", error)
+    console.error("API Response:", error.response)
+    console.error("API Response Data:", error.response?.data)
+    throw error
+  }
 }
 
 function getUser(token: string): Promise<any> {
@@ -48,8 +50,16 @@ function getUser(token: string): Promise<any> {
   })
 }
 
-function sendClientPassword(email: string): Promise<any> {
-  return axios.post(`${config.TCI_API_URL}/auth/generate-code`, { email })
+async function sendClientPassword(email: string): Promise<any> {
+  try {
+    const response = await axios.post(`${config.TCI_API_URL}/auth/generate-code`, { email })
+    return response
+  } catch (error) {
+    console.error("API Error in sendClientPassword:", error)
+    console.error("API Response:", error.response)
+    console.error("API Response Data:", error.response?.data)
+    throw error
+  }
 }
 
 export default {
