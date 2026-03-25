@@ -180,18 +180,7 @@ app.post("/login/client", async (req: Request, res: Response) => {
   // Regular login with email+password
   try {
     const response = await api.login(email, password)
-    const responseData = response.data
-    
-    // Handle multiple accounts response
-    if (responseData.multiple_accounts) {
-      return res.render("login_client", { 
-        multiple_accounts: responseData.accounts,
-        email,
-        show_selection: true 
-      })
-    }
-    
-    const token = responseData
+    const token = response.data
     // Token format: aaaaa.bbbbb.ccccc
     if (token.split(".").length === 3) {
       req.session.token = token
