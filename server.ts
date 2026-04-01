@@ -210,7 +210,7 @@ app.get("/login/coach", (req: Request, res: Response) => {
 app.post("/login/coach", async (req: Request, res: Response) => {
   const { email, password } = req.body
   try {
-    const response = await api.login(email, password)
+    const response = await api.coachLogin(email, password)
     const token = response.data
     // Token format: aaaaa.bbbbb.ccccc
     if (token.split(".").length === 3) {

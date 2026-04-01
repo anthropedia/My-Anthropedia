@@ -44,6 +44,18 @@ async function login(email: string, password: string): Promise<any> {
   }
 }
 
+async function coachLogin(email: string, password: string): Promise<any> {
+  try {
+    const response = await axios.post(`${config.TCI_API_URL}/token`, { email, password })
+    return response
+  } catch (error) {
+    console.error("API Error in coachLogin:", error)
+    console.error("API Response:", error.response)
+    console.error("API Response Data:", error.response?.data)
+    throw error
+  }
+}
+
 function getUser(token: string): Promise<any> {
   return axios.get(`${config.TCI_API_URL}/user`, {
     headers: { Authorization: token },
@@ -65,6 +77,7 @@ async function sendClientPassword(email: string): Promise<any> {
 export default {
   getData,
   login,
+  coachLogin,
   getUser,
   sendClientPassword,
 }
