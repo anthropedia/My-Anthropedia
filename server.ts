@@ -9,6 +9,9 @@ import { Server } from "socket.io"
 import shareRoutes from "./src/routes/share"
 import middlewares from "./src/middlewares"
 
+const GRIST_DOC_ID = "ea9DA9WWELC5UEfkj94QC7"
+const GRIST_BASE_URL = "https://anthropedia.getgrist.com/api"
+
 const PORT = process.env.PORT || 3000
 const app = express()
 const server = createServer(app)
@@ -34,8 +37,61 @@ app.engine("eta", buildEtaEngine())
 app.set("view engine", "eta")
 
 // Both videos and audios are properly defined
-const videos = await api.getData<MediaType>("Videos")
-const audios = await api.getData<MediaType>("Audios")
+const rawVideos = (await api.getData<MediaType>("Videos")) || []
+const rawAudios = (await api.getData<MediaType>("Audios")) || []
+
+function extractAttachmentId(value: unknown): string | number | null {
+  if (typeof value === "number" || typeof value === "string") return value
+  if (value && typeof value === "object" && "id" in value) {
+    const id = (value as any).id
+    if (typeof id === "number" || typeof id === "string") return id
+  }
+  return null
+}
+
+function getCoverFromMedia(media: MediaType): string | null {
+  const coverValue = media["$cover"] ?? media.cover
+  if (!coverValue) return null
+
+  if (Array.isArray(coverValue)) {
+    if (!coverValue.length) return null
+
+    // Grist attachments can look like ["L", 35] or [{id: 35}, ...]
+    const directUrl = coverValue.find((v) => typeof v === "string" && v.startsWith("http")) as string | undefined
+    if (directUrl) return directUrl
+
+    for (const item of coverValue) {
+      const id = extractAttachmentId(item)
+      if (typeof id === "number") return `/grist/attachments/${id}`
+      if (typeof id === "string" && /^\d+$/.test(id)) return `/grist/attachments/${id}`
+    }
+
+    return null
+  }
+
+  if (typeof coverValue === "string") {
+    if (coverValue.startsWith("http")) return coverValue
+    return `/grist/attachments/${coverValue}`
+  }
+
+  if (typeof coverValue === "number") {
+    return `/grist/attachments/${coverValue}`
+  }
+
+  const id = extractAttachmentId(coverValue)
+  return id ? `/grist/attachments/${id}` : null
+}
+
+const videos = rawVideos.map((media) => ({
+  ...media,
+  mediaType: "videos",
+  coverUrl: getCoverFromMedia(media),
+}))
+const audios = rawAudios.map((media) => ({
+  ...media,
+  mediaType: "Audios",
+  coverUrl: getCoverFromMedia(media),
+}))
 
 // console.debug(videos)
 
@@ -52,8 +108,11 @@ type MediaType = {
   title: string
   description: string
   iframe_v2: string
-  cover: Array<string>
+  cover?: Array<string> | string | number[]
+  "$cover"?: Array<string | number> | string | number
   Script_v2: string
+  mediaType?: "videos" | "Audios"
+  coverUrl?: string | null
 }
 
 type UserType = {
@@ -93,8 +152,13 @@ class User implements CoachUserType | ClientUserType {
   constructor(data: CoachUserType | ClientUserType) {
     Object.assign(this, data)
 
-    // Explicitly set role
-    this.role = data.role || (data as any).permissions?.includes('coach') ? 'coach' : 'client'
+    // Preserve explicit API role when present; otherwise infer from permissions
+    const explicitRole = typeof data.role === "string" ? data.role.toLowerCase() : ""
+    if (explicitRole === "coach" || explicitRole === "client") {
+      this.role = explicitRole
+    } else {
+      this.role = (data as any).permissions?.includes("coach") ? "coach" : "client"
+    }
 
     // Convert subscription date for coaches
     if (this.isCoach && this.subscription_expiration_date) {
@@ -106,17 +170,30 @@ class User implements CoachUserType | ClientUserType {
   canAccess(resource: string | number = null): boolean {
     // Coach access logic
     if (this.isCoach) {
-      return this.subscription_expiration_date &&
+      return !!(
+        this.subscription_expiration_date &&
         this.subscription_expiration_date > new Date()
+      )
     }
 
     // Client access logic
-    if (this.isClient && this.knowyourself_series) {
-      if(resource) {
-        const resourceStr = typeof resource === 'number' ? resource.toString() : resource
-        return this.knowyourself_series.includes(getMediaId(resourceStr))
+    if (this.isClient) {
+      // Allow authenticated clients into the app; per-media access is checked below.
+      if (!resource) return true
+
+      const resourceStr = typeof resource === "number" ? resource.toString() : resource
+      const mediaId = getMediaId(resourceStr)
+
+      if (typeof this.knowyourself_series === "string" && this.knowyourself_series.length > 0) {
+        return this.knowyourself_series.includes(mediaId)
       }
-      else return this.knowyourself_series.length > 0
+
+      if (Array.isArray((this as any).permissions) && (this as any).permissions.length > 0) {
+        const perms = (this as any).permissions.map((p) => String(p))
+        return perms.includes(resourceStr) || perms.includes(mediaId)
+      }
+
+      return false
     }
 
     return false
@@ -242,17 +319,51 @@ app.get("/dashboard", authenticate, (req: Request, res: Response) => {
 
   res.render("dashboard", {
     isCoach: user.isCoach,
-    allowedVideos: videos?.filter((m) => user.canAccess(m.permission)),
-    allowedAudios: audios?.filter((m) => user.canAccess(m.permission)),
+    allowedVideos: videos.filter((m) => user.canAccess(m.permission)),
+    allowedAudios: audios.filter((m) => user.canAccess(m.permission)),
     user
   })
 })
 
+app.get("/grist/attachments/:attachmentId", authenticate, async (req: Request, res: Response) => {
+  const attachmentId = req.params.attachmentId
+  const url = `${GRIST_BASE_URL}/docs/${GRIST_DOC_ID}/attachments/${attachmentId}/download`
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${process.env.GRIST_TOKEN}`,
+      Accept: "*/*",
+    },
+  })
+
+  if (!response.ok) {
+    return res.status(response.status).send("Could not load media cover")
+  }
+
+  const contentType = response.headers.get("content-type") || "image/jpeg"
+  const bytes = await response.arrayBuffer()
+
+  res.setHeader("Content-Type", contentType)
+  res.setHeader("Cache-Control", "public, max-age=3600")
+  return res.send(Buffer.from(bytes))
+})
+
+app.get("/media/:type/:id", authenticate, (req: Request, res: Response) => {
+  const type = req.params.type?.toLowerCase()
+  const source = type === "audios" ? audios : videos
+  const media: MediaType = source.find((m) => m.id == req.params.id)
+
+  if (!media) return res.status(404).redirect("/restricted")
+  if (!(req as any).user.canAccess(media.permission)) {
+    return res.status(403).redirect("/restricted")
+  }
+
+  res.render("media", { media, user: (req as any).user })
+})
+
+// Backward compatible route
 app.get("/media/:id", authenticate, (req: Request, res: Response) => {
-  // Search in both videos and audios arrays
-  const media: MediaType =
-    videos?.find((m) => m.id == req.params.id) ||
-    audios?.find((m) => m.id == req.params.id)
+  const media: MediaType = videos.find((m) => m.id == req.params.id) || audios.find((m) => m.id == req.params.id)
 
   if (!media) return res.status(404).redirect("/restricted")
   if (!(req as any).user.canAccess(media.permission)) {
@@ -264,7 +375,6 @@ app.get("/media/:id", authenticate, (req: Request, res: Response) => {
 
 // Authentication middleware attaches user with canAccess(permission: string | number) to req
 async function authenticate(req: Request, res: Response, next: () => void) {
-  console.debug(req.session)
   if (!req.session.token) {
     res.redirect("/")
     return
@@ -272,15 +382,17 @@ async function authenticate(req: Request, res: Response, next: () => void) {
 
   let user
   if (!req.session.rawUser) {
-    const userData = await api.getUser(req.session.token)
+    const userResponse = await api.getUser(req.session.token)
+    const userData = (userResponse as any)?.data || userResponse
     if (!userData) return res.redirect("/")
     req.session.rawUser = userData
     user = new User(userData)
   } else {
     user = new User(req.session.rawUser)
   }
+
   (req as any).user = user
-  if(!user.canAccess()) return res.redirect("/restricted")
+  if (!user.canAccess()) return res.redirect("/restricted")
   next()
 }
 

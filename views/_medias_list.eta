@@ -1,4 +1,4 @@
-<div class="row gx-3 scrollable-section">
+
   <div class="container-fluid">
     <div class="position-relative">
       <!-- Scroll buttons -->
@@ -13,8 +13,8 @@
         <div class="d-flex flex-row flex-nowrap overflow-auto">
           <!-- Repeat this block 16 times -->
           <% it.medias.forEach(media => { %>
-          <a class="card me-3" style="flex: 0 0 auto; max-width: 200px;" href="/media/<%= media.id %>">
-            <img src="<%= it.defaultImage %>" class="card-img-top" alt="Movie Image">
+          <a class="card me-3" style="flex: 0 0 auto; max-width: 200px;" href="/media/<%= media.mediaType || 'videos' %>/<%= media.id %>">
+            <img src="<%= media.coverUrl || it.defaultImage %>" class="cover card-img-top" alt="Media cover">
             <div class="card-body">
               <h5 class="card-title"><%= media.reference %>: <%= media.title %></h5>
               <!-- <p class="card-text"><%= media.description.substring(0, 77) %></p> -->
@@ -27,3 +27,5 @@
       </div>
     </div>
   </div>
+
+
