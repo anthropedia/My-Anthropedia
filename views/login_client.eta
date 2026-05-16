@@ -16,7 +16,7 @@
     <div class="col-9">
       <input type="email" autofocus name="email" value="<%= it.client_email || '' %>" id="form2Example17" class="form-control form-control-lg" />
     </div>
-    <input type="submit" class="col-3" name="generate_password" value="Send Code" />
+    <input type="button" class="col-3" id="send-code-btn" value="Send Code" />
   </div>
 
   <div data-mdb-input-init class="form-outline mb-4">
@@ -30,3 +30,14 @@
 
   <a href="https://anthropedia.org/privacy-policy" class="small text-muted" target="_blank">Privacy policy</a>
 </form>
+
+<script>
+  document.getElementById('send-code-btn').addEventListener('click', function() {
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'generate_password';
+    input.value = '1';
+    this.form.appendChild(input);
+    this.form.submit();
+  });
+</script>
