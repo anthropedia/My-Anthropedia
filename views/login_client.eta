@@ -1,6 +1,6 @@
 <% layout("./login") %>
 
-<form action="/login/client" method="post" class="login">
+<form action="/login/client" method="post" class="login" id="client-login-form">
   <div class="d-flex align-items-center mb-3 pb-1">
     <i class="fas fa-cubes fa-2x me-3" style="color: #ff6219;"></i>
     <a class="navbar-brand" href="/" title="Back to Home">
@@ -25,19 +25,40 @@
   </div>
 
   <div class="pt-1 mb-4">
-    <button data-mdb-button-init data-mdb-ripple-init class="btn btn-dark btn-lg btn-block" type="submit">Login</button>
+    <button data-mdb-button-init data-mdb-ripple-init class="btn btn-dark btn-lg btn-block" id="login-btn" type="submit" disabled>Login</button>
   </div>
 
   <a href="https://anthropedia.org/privacy-policy" class="small text-muted" target="_blank">Privacy policy</a>
 </form>
 
 <script>
-  document.getElementById('send-code-btn').addEventListener('click', function() {
-    var input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'generate_password';
-    input.value = '1';
-    this.form.appendChild(input);
-    this.form.submit();
-  });
+  const clientLoginForm = document.getElementById('client-login-form')
+  const sendCodeButton = document.getElementById('send-code-btn')
+  const passwordInput = document.getElementById('form2Example27')
+  const loginButton = document.getElementById('login-btn')
+
+  function syncLoginButtonState() {
+    loginButton.disabled = !passwordInput.value.trim()
+  }
+
+  passwordInput.addEventListener('input', syncLoginButtonState)
+
+  clientLoginForm.addEventListener('submit', function (event) {
+    const isGeneratingCode = !!clientLoginForm.querySelector('input[name="generate_password"]')
+    if (!isGeneratingCode && !passwordInput.value.trim()) {
+      event.preventDefault()
+      syncLoginButtonState()
+    }
+  })
+
+  sendCodeButton.addEventListener('click', function () {
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = 'generate_password'
+    input.value = '1'
+    clientLoginForm.appendChild(input)
+    clientLoginForm.submit()
+  })
+
+  syncLoginButtonState()
 </script>
