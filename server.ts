@@ -135,7 +135,7 @@ type ClientUserType = UserType & {
   language: string
   provider: string
   temporary_password: string
-  knowyourself_series: string
+  knowyourself_series: string | string[]
 }
 
 class User implements CoachUserType | ClientUserType {
@@ -184,13 +184,19 @@ class User implements CoachUserType | ClientUserType {
       const resourceStr = typeof resource === "number" ? resource.toString() : resource
       const mediaId = getMediaId(resourceStr)
 
-      if (typeof this.knowyourself_series === "string" && this.knowyourself_series.length > 0) {
-        return this.knowyourself_series.includes(mediaId)
+      const kys = (this as any).knowyourself_series
+      if (Array.isArray(kys) && kys.length > 0) {
+        const normalized = kys.map((k) => String(k).toLowerCase())
+        return normalized.includes(mediaId.toLowerCase())
+      }
+
+      if (typeof kys === "string" && kys.length > 0) {
+        return kys.toLowerCase().includes(mediaId.toLowerCase())
       }
 
       if (Array.isArray((this as any).permissions) && (this as any).permissions.length > 0) {
-        const perms = (this as any).permissions.map((p) => String(p))
-        return perms.includes(resourceStr) || perms.includes(mediaId)
+        const perms = (this as any).permissions.map((p) => String(p).toLowerCase())
+        return perms.includes(resourceStr.toLowerCase()) || perms.includes(mediaId.toLowerCase())
       }
 
       return false
