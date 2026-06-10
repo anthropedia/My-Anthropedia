@@ -75,17 +75,25 @@
 
   async function resetPassword(input) {
     const disabled = input.classList.contains("disabled-link")
-    if(disabled) return
-    const response = await fetch("https://api.tci.anthropedia.org/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: emailInput.value.trim() })
-    })
-    const reply = await response.text()
-    if(reply == "HTTPQuerySet object matching query does not exist") {
-      alert("This email does not exist. Try another email.")
-    } else {
+    if (disabled) return
+
+    try {
+      const response = await fetch("https://api.tci.anthropedia.org/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailInput.value.trim() })
+      })
+
+      const reply = await response.text()
+
+      if (!response.ok) {
+        alert(reply || "Could not reset password. Please verify the email and try again.")
+        return
+      }
+
       alert("Password reset email sent. Check your inbox.")
+    } catch (error) {
+      alert("Could not contact the server. Please try again in a moment.")
     }
   }
 </script>
