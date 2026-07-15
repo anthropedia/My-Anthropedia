@@ -254,7 +254,13 @@ app.post("/login/client", async (req: Request, res: Response) => {
   if (generate_password) {
     try {
       const response = await api.sendClientPassword(email)
-      data.message = "An authentication code has been sent to you via email."
+      const result = response.data
+      const parts = []
+      if (result.signal_sent) parts.push("Signal")
+      if (result.sent) parts.push("email")
+      data.message = parts.length
+        ? `An authentication code has been sent to you via ${parts.join(" and ")}.`
+        : "An authentication code has been sent to you via email."
     } catch (request) {
       data.error = request.response.data
     }
