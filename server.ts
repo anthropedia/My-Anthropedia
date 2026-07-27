@@ -96,7 +96,44 @@ const audios = rawAudios.map((media) => ({
 // console.debug(videos)
 
 function getMediaId(s: string): string {
-  return s[0].toLowerCase() + s.match(/\d+/)[0]
+  const value = String(s || "").toLowerCase().trim()
+  const match = value.match(/[va]?\d+/)
+  if (!match) return value
+  const token = match[0]
+  if (token[0] === "v" || token[0] === "a") return token
+  return value[0] + token
+}
+
+function unwrapUserData(payload: any): any {
+  let current = payload
+
+  for (let i = 0; i < 5; i++) {
+    if (!current || typeof current !== "object") return current
+
+    if (current.user && typeof current.user === "object") {
+      current = current.user
+      continue
+    }
+
+    if (current.client && typeof current.client === "object") {
+      current = current.client
+      continue
+    }
+
+    if (current.coach && typeof current.coach === "object") {
+      current = current.coach
+      continue
+    }
+
+    if (current.data && typeof current.data === "object") {
+      current = current.data
+      continue
+    }
+
+    return current
+  }
+
+  return current
 }
 
 // MediaType properly covers both video and audio items and includes permission
@@ -275,7 +312,8 @@ app.post("/login/client", async (req: Request, res: Response) => {
       req.session.token = token
       try {
         const userResponse = await api.getUser(token)
-        req.session.rawUser = userResponse.data
+        const userData = unwrapUserData(userResponse.data)
+        req.session.rawUser = userData
         return res.redirect("/dashboard")
       } catch (request) {
         console.error("Login error:", request.response.data)
@@ -305,7 +343,8 @@ app.post("/login/coach", async (req: Request, res: Response) => {
     if (token.split(".").length === 3) {
       req.session.token = token
       const userResponse = await api.getUser(token)
-      req.session.rawUser = userResponse.data
+      const userData = unwrapUserData(userResponse.data)
+      req.session.rawUser = userData
       return res.redirect("/dashboard")
     }
   } catch (error) {
@@ -395,12 +434,14 @@ async function authenticate(req: Request, res: Response, next: () => void) {
   let user
   if (!req.session.rawUser) {
     const userResponse = await api.getUser(req.session.token)
-    const userData = (userResponse as any)?.data || userResponse
+    const userData = unwrapUserData((userResponse as any)?.data || userResponse)
     if (!userData) return res.redirect("/")
     req.session.rawUser = userData
     user = new User(userData)
   } else {
-    user = new User(req.session.rawUser)
+    const normalizedUserData = unwrapUserData(req.session.rawUser)
+    req.session.rawUser = normalizedUserData
+    user = new User(normalizedUserData)
   }
 
   (req as any).user = user
