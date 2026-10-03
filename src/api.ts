@@ -23,11 +23,9 @@ async function getData<T>(
 
     const body = response.data
 
-    if (!body.records.length) return null
-
     return body.records.map((r) => ({ id: r.id, ...r.fields }))
   } catch (error) {
-    console.error(error.message)
+    console.error(`Failed to fetch Grist ${table} catalog:`, error.message)
     return null
   }
 }

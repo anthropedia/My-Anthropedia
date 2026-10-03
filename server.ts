@@ -3,6 +3,7 @@ import { json } from "body-parser"
 import path from "path"
 import { Eta } from "eta"
 import api from "./src/api.ts"
+import { createCatalog } from "./src/catalog.ts"
 import session from "express-session"
 import { createServer } from "http"
 import { Server } from "socket.io"
@@ -36,9 +37,9 @@ app.use(middlewares)
 app.engine("eta", buildEtaEngine())
 app.set("view engine", "eta")
 
-// Both videos and audios are properly defined
-const rawVideos = (await api.getData<MediaType>("Videos")) || []
-const rawAudios = (await api.getData<MediaType>("Audios")) || []
+// Retry failed catalog reads and retain the last successful records during outages.
+const videoCatalog = createCatalog(() => api.getData<MediaType>("Videos"))
+const audioCatalog = createCatalog(() => api.getData<MediaType>("Audios"))
 
 function extractAttachmentId(value: unknown): string | number | null {
   if (typeof value === "number" || typeof value === "string") return value
@@ -82,18 +83,25 @@ function getCoverFromMedia(media: MediaType): string | null {
   return id ? `/grist/attachments/${id}` : null
 }
 
-const videos = rawVideos.map((media) => ({
-  ...media,
-  mediaType: "videos",
-  coverUrl: getCoverFromMedia(media),
-}))
-const audios = rawAudios.map((media) => ({
-  ...media,
-  mediaType: "Audios",
-  coverUrl: getCoverFromMedia(media),
-}))
+async function loadMedia() {
+  await Promise.all([videoCatalog.refresh(), audioCatalog.refresh()])
+}
 
-// console.debug(videos)
+function videos() {
+  return videoCatalog.records.map((media) => ({
+    ...media,
+    mediaType: "videos",
+    coverUrl: getCoverFromMedia(media),
+  }))
+}
+
+function audios() {
+  return audioCatalog.records.map((media) => ({
+    ...media,
+    mediaType: "Audios",
+    coverUrl: getCoverFromMedia(media),
+  }))
+}
 
 function getMediaId(s: string): string {
   const value = String(s || "").toLowerCase().trim()
@@ -365,13 +373,15 @@ app.get("/restricted", (req: Request, res: Response) => {
 })
 
 // Protected routes
-app.get("/dashboard", authenticate, (req: Request, res: Response) => {
+app.get("/dashboard", authenticate, async (req: Request, res: Response) => {
+  await loadMedia()
   const user = (req as any).user
 
   res.render("dashboard", {
     isCoach: user.isCoach,
-    allowedVideos: videos.filter((m) => user.canAccess(m.permission)),
-    allowedAudios: audios.filter((m) => user.canAccess(m.permission)),
+    allowedVideos: videos().filter((m) => user.canAccess(m.permission)),
+    allowedAudios: audios().filter((m) => user.canAccess(m.permission)),
+    audioCatalogAvailable: audioCatalog.available,
     user
   })
 })
@@ -399,9 +409,10 @@ app.get("/grist/attachments/:attachmentId", authenticate, async (req: Request, r
   return res.send(Buffer.from(bytes))
 })
 
-app.get("/media/:type/:id", authenticate, (req: Request, res: Response) => {
+app.get("/media/:type/:id", authenticate, async (req: Request, res: Response) => {
+  await loadMedia()
   const type = req.params.type?.toLowerCase()
-  const source = type === "audios" ? audios : videos
+  const source = type === "audios" ? audios() : videos()
   const media: MediaType = source.find((m) => m.id == req.params.id)
 
   if (!media) return res.status(404).redirect("/restricted")
@@ -413,8 +424,9 @@ app.get("/media/:type/:id", authenticate, (req: Request, res: Response) => {
 })
 
 // Backward compatible route
-app.get("/media/:id", authenticate, (req: Request, res: Response) => {
-  const media: MediaType = videos.find((m) => m.id == req.params.id) || audios.find((m) => m.id == req.params.id)
+app.get("/media/:id", authenticate, async (req: Request, res: Response) => {
+  await loadMedia()
+  const media: MediaType = videos().find((m) => m.id == req.params.id) || audios().find((m) => m.id == req.params.id)
 
   if (!media) return res.status(404).redirect("/restricted")
   if (!(req as any).user.canAccess(media.permission)) {
@@ -431,20 +443,20 @@ async function authenticate(req: Request, res: Response, next: () => void) {
     return
   }
 
-  let user
-  if (!req.session.rawUser) {
+  try {
+    // Re-fetch on every protected request: coaches can assign guides while a client
+    // is logged in, and /user also merges access from duplicate client profiles.
     const userResponse = await api.getUser(req.session.token)
-    const userData = unwrapUserData((userResponse as any)?.data || userResponse)
-    if (!userData) return res.redirect("/")
+    const userData = unwrapUserData(userResponse.data)
+    if (!userData || typeof userData !== "object") return res.redirect("/login")
     req.session.rawUser = userData
-    user = new User(userData)
-  } else {
-    const normalizedUserData = unwrapUserData(req.session.rawUser)
-    req.session.rawUser = normalizedUserData
-    user = new User(normalizedUserData)
+    ;(req as any).user = new User(userData)
+  } catch (error) {
+    console.error("Could not refresh authenticated user:", error)
+    return res.status(503).send("Unable to verify your access right now. Please try again shortly.")
   }
 
-  (req as any).user = user
+  const user = (req as any).user
   if (!user.canAccess()) return res.redirect("/restricted")
   next()
 }

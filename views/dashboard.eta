@@ -12,8 +12,9 @@
 
 <% if(!it.isCoach) { %>
 <form onsubmit="joinSession(event)">
-  <h2>Join a Session</h2>
-  <input name="code" type="text" minlength="4" maxlength="4" required inputmode="numeric" placeholder="Enter session code" />
+  <h2>Join a Live Session</h2>
+  <p>Only enter a four-character code given by your coach for a live session. Audio guides appear below when assigned; your email login code is not a session code.</p>
+  <input name="code" type="text" minlength="4" maxlength="4" required placeholder="4-character session code" />
   <input type="submit" class="btn btn-primary" value="Join">
 </form>
 <% } %>
@@ -31,6 +32,15 @@
   <h2>Audio Guides</h2>
 
   <%~ include("./_medias_list.eta", {medias: it.allowedAudios || [], defaultImage: "/images/Audio Guide 1.png"}) %>
+</section>
+<% } else { %>
+<section class="container mt-4">
+  <h2>Audio Guides</h2>
+  <% if (!it.audioCatalogAvailable) { %>
+  <p>Audio guides are temporarily unavailable. Please try refreshing this page shortly or contact support.</p>
+  <% } else { %>
+  <p>No audio guides are showing for this account. If one was assigned, refresh this page or contact support.</p>
+  <% } %>
 </section>
 <% } %>
 

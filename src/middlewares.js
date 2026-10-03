@@ -7,8 +7,15 @@ function computeRemainingDays(expiry) {
 }
 
 function getLocale(req) {
-  // Express's built-in negotiation fallback as needed
-  return (req.acceptsLanguages && req.acceptsLanguages()[0]) || 'en-US'
+  for (const language of req.acceptsLanguages?.() || []) {
+    if (language === '*') continue
+    try {
+      if (Intl.DateTimeFormat.supportedLocalesOf(language).length) return language
+    } catch (error) {
+      // Ignore malformed Accept-Language values and use a known locale.
+    }
+  }
+  return 'en-US'
 }
 
 // Decide where you get the user's TZ. Common: req.user.timeZone or profile field.
