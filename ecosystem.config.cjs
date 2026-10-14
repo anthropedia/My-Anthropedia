@@ -6,7 +6,7 @@ module.exports = {
             interpreter: "/home/ubuntu/.bun/bin/bun",
             interpreter_args: "run",
             instances: "1",
-            exec_mode: "cluster",
+            exec_mode: "fork",
             watch: true,
             env: {
                 PORT: 3002,
