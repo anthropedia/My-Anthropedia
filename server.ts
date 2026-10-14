@@ -288,6 +288,7 @@ app.get("/login", (req: Request, res: Response) => {
 
 // Auth
 app.get("/login/client", (req: Request, res: Response) => {
+  if (req.session?.token) return res.redirect("/dashboard")
   res.render("login_client")
 })
 
@@ -339,6 +340,7 @@ app.post("/login/client", async (req: Request, res: Response) => {
 })
 
 app.get("/login/coach", (req: Request, res: Response) => {
+  if (req.session?.token) return res.redirect("/dashboard")
   res.render("login_coach")
 })
 
