@@ -13,6 +13,9 @@
     <div id="audioInstruction" class="alert alert-info">
       <strong>🔊 Enable Audio:</strong> Click on the video above to enable sound
     </div>
+    <div class="alert alert-warning">
+      <strong>On Zoom?</strong> Make sure to share your screen with <em>Share computer sound</em> enabled so your coach can hear the session audio.
+    </div>
 
     <div>
       <button class="btn btn-primary" id="pause">Pause</button>
@@ -26,7 +29,6 @@
   const socket = io()
   const room = "<%= it.token %>"
   const pauseButton = document.getElementById("pause")
-  const muteButton = document.getElementById("mute")
   const errorNode = document.getElementById("error")
   let video = null
   let latestServerEvent = null // Store the latest event from the server

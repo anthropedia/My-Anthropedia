@@ -25,6 +25,10 @@
     <div class="col-12">
       <div class="session-controls mb-3">
         <p>Session code: <code id="session-code"></code></p>
+        <div id="client-joined-notice" class="alert alert-info" hidden>
+          Client connected — your local audio has been muted to prevent Zoom echo.
+          <button class="btn btn-sm btn-outline-secondary ms-2" id="toggle-mute">Unmute my audio</button>
+        </div>
       </div>
     </div>
   </div>
@@ -45,6 +49,12 @@
 
     socket.on('message', (data) => {
       if(video[data.event]) video[data.event]()
+    })
+
+    socket.on('client-joined', () => {
+      video.muted = true
+      document.getElementById("client-joined-notice").hidden = false
+      document.getElementById("toggle-mute").textContent = "Unmute my audio"
     })
 
     const player = VdoPlayer.getInstance(document.querySelector("iframe"))
@@ -68,6 +78,11 @@
       video.addEventListener(event, () => {
         socket.emit("message", { room, content: { event, currentTime: video.currentTime } })
       })
+    })
+
+    document.getElementById("toggle-mute").addEventListener("click", () => {
+      video.muted = !video.muted
+      document.getElementById("toggle-mute").textContent = video.muted ? "Unmute my audio" : "Mute my audio"
     })
   }
 

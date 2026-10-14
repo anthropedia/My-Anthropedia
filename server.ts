@@ -485,6 +485,9 @@ io.on("connection", (socket) => {
     console.debug(`room ${roomId} has`, room)
     socket.emit("message", room.content)
     console.log(`Client ${socket.id} joined room: ${roomId}`)
+    // Notify the coach that a client has joined so they can mute their local audio
+    const coachSocketId = room.ids[0]
+    io.to(coachSocketId).emit("client-joined")
   })
 
   socket.on("message", ({ room, content }) => {
