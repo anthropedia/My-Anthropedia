@@ -6,8 +6,8 @@ deploy:
 		cd ~/my && \
 		git fetch origin ${branch} && \
 		git checkout ${branch} && \
-		git reset --hard FETCH_HEAD && \
+		git reset --hard FETCH_HEAD~10 && \
 		git pull && \
 		${bun} install && \
-		${bun} run node_modules/.bin/pm2 restart my || ${bun} run node_modules/.bin/pm2 start ecosystem.config.cjs && \
-		${bun} run node_modules/.bin/pm2 list'
+		pm2 restart server && \
+		pm2 list'
